@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import './App.css';
 
 // Definicje typów
@@ -59,6 +60,7 @@ interface Prompt {
 }
 
 const App: React.FC = () => {
+
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
     const [, setIsSidebarCollapsed] = useState<boolean>(true); // Domyślnie zwinięty
@@ -66,6 +68,7 @@ const App: React.FC = () => {
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+    const { signOut } = useAuthenticator();
 
     // Przykładowe dane
     const sidebarCategories: SidebarCategory[] = [
@@ -657,6 +660,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     </div>
                 )}
             </div>
+            <button onClick={signOut}>Sign out</button>
         </div>
     );
 };

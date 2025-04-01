@@ -1,11 +1,11 @@
 version: 1
 backend:
   phases:
-    preBuild:
-      commands:
-        - npx --ignore-existing cdk ls
-        # Install a proper version of the AWS CDK CLI
-        - npm install -g aws-cdk@
+    # preBuild:
+    #   commands:
+      
+    #     # Install a proper version of the AWS CDK CLI
+    #     - npm install -g aws-cdk@
     build:
       commands:
         - npx cdk --version  # Verify installed version 

@@ -6,32 +6,56 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
+
 const schema = a.schema({
   Prompt: a
-  .model({
-    id: a.id().required(),
-    authorId: a.id().required(),
-    title: a.string().required(),
-    description: a.string(),
-    content: a.string().required(),
-    version: a.string().required(),
-    tags: a.string().array(), 
-    previousPromptId: a.id(), 
-    previousPrompt: a.belongsTo('Prompt', 'parentPromptId'),
-    creationDate: a.datetime().required(), 
-    lastModifiedDate: a.datetime().required(),
-    versions: a.hasMany("Version", "promptId")
-  })
-  .authorization((allow: a.AuthorizationAllow) => [allow.publicApiKey()]),
+    .model({
+      title: a.string().required(),
+      description: a.string(),
+      content: a.string().required(),
+      tags: a.string().array(),
+      authorId: a.id().required(), // Klucz obcy do user
+      creationDate: a.datetime().required(),
+      lastModifiedDate: a.datetime().required(),
+      latestVersionId: a.id(),
+      author: a.belongsTo('Uuser', 'authorId'),
+      versions: a.hasMany("Version", "promptId"),
+      latestVersion: a.belongsTo('Version', 'latestVersionId'),
+      favoritedBy: a.hasMany('UserFavoritePrompt', 'promptId')
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
 
   Version: a
-  .model({
-    content: a.string().required(),
-    version: a.string().required(),
-    promptId: a.id().required(),
-    prompt: a.belongsTo("Prompt")
-  })
-  .authorization((allow: a.AuthorizationAllow) => [allow.publicApiKey()])
+    .model({
+      content: a.string().required(),
+      versionNumber: a.string().required(),
+      creationDate: a.datetime().required(),
+      promptId: a.id().required(), // Klucz obcy do Prompt
+      prompt: a.belongsTo("Prompt", 'promptId') // Relacja do nadrzędnego promptu
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+
+  
+  User: a
+    .model({
+      name: a.string().required(),
+      surname: a.string().required(),
+      email: a.email(),
+      authoredPrompts: a.hasMany('Prompt', 'authorId'),
+      favoritePrompts: a.hasMany('UserFavoritePrompt', 'userId')
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+
+
+  UserFavoritePrompt: a
+    .model({
+      userId: a.id().required(), // Klucz obcy do User
+      user: a.belongsTo('user', 'userId'),
+      promptId: a.id().required(), // Klucz obcy do Prompt
+      prompt: a.belongsTo('Prompt', 'promptId')
+    })
+    .authorization((allow) => [allow.publicApiKey()])
+    .identifier(['userId', 'promptId']), // Klucz złożony zapobiega duplikatom
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -39,8 +63,8 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    // API Key is used for a.allow.public() rules
+    defaultAuthorizationMode: "userPool", // Zalecany tryb dla aplikacji z logowaniem użytkowników
+    // Opcjonalnie: Konfiguracja API Key jeśli jest potrzebny dostęp publiczny
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },

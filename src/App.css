@@ -189,6 +189,149 @@ small.text-muted {
     text-transform: uppercase; /* Zawsze wielkie litery */
 }
 
+/* Profile menu styles */
+.profile-menu-container {
+    position: relative !important;
+    z-index: 1600 !important;
+}
+
+.profile-img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.profile-img:hover {
+    opacity: 0.8;
+}
+
+.profile-dropdown {
+    position: absolute;
+    right: 0;
+    top: 50px;
+    background-color: var(--card-background);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    min-width: 220px;
+    z-index: 1500;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideDown 0.2s ease-out;
+    transform-origin: top right;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Poprawka dla kontenera menu */
+.dropdown-menu {
+    position: static;
+    display: block;
+    float: none;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+}
+
+/* Wyraźniejszy styl dla elementów menu */
+.dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    transition: background-color 0.2s !important;
+    background-color: transparent !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    text-align: left !important;
+    font-size: 0.95rem !important;
+}
+
+/* Styl dla przycisku wylogowania */
+button.dropdown-item {
+    width: 100% !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    background-color: transparent !important;
+    font-family: inherit !important;
+    color: var(--text-color) !important;
+}
+
+/* Efekt hover dla wszystkich elementów menu */
+.dropdown-item:hover,
+button.dropdown-item:hover {
+    background-color: rgba(var(--primary-color-rgb), 0.1) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Specyficzny styl dla przycisku wylogowania */
+.logout-btn {
+    background-color: rgba(220, 53, 69, 0.05) !important;
+    border-radius: 0 0 8px 8px !important;
+    margin-top: 4px !important;
+    position: relative !important;
+    text-align: left !important;
+    font-weight: 500 !important;
+    color: #dc3545 !important;
+}
+
+/* Dodanie linii oddzielającej */
+.logout-btn::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+/* Efekt hover dla przycisku wylogowania */
+.logout-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+}
+
+/* Ikona przycisku wylogowania */
+.logout-btn i {
+    color: #dc3545 !important;
+}
+
+/* Usunięcie marginesu z prawej strony dla ikon */
+.dropdown-item i {
+    margin-right: 12px !important;
+}
+
+/* Poprawka pozycjonowania menu profilu na urządzeniach mobilnych */
+@media (max-width: 768px) {
+    .profile-dropdown {
+        right: -10px;
+        min-width: 180px;
+    }
+}
+
 /* Nowy styl dla widoku szczegółów promptu */
 .prompt-detail-view {
     padding: 2rem;
@@ -255,9 +398,32 @@ small.text-muted {
     margin-bottom: 2rem;
 }
 
-.prompt-content-section h4 {
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1rem;
+}
+
+.prompt-header h4 {
+    margin-bottom: 0;
     font-weight: 600;
+}
+
+.compare-btn {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.compare-btn.active {
+    background-color: rgba(var(--primary-color-rgb), 0.1);
+    color: var(--primary-color);
 }
 
 .prompt-content-box {
@@ -271,6 +437,61 @@ small.text-muted {
     min-height: 200px;
     max-height: 500px;
     overflow-y: auto;
+}
+
+/* Style dla widoku porównania */
+.diff-view {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    width: 100%;
+}
+
+.diff-line {
+    display: flex;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.diff-line.added {
+    background-color: rgba(46, 160, 67, 0.15);
+}
+
+.diff-line.removed {
+    background-color: rgba(248, 81, 73, 0.15);
+}
+
+.diff-line .line-number {
+    color: var(--text-muted);
+    text-align: right;
+    padding: 0 8px;
+    user-select: none;
+    min-width: 40px;
+    border-right: 1px solid var(--border-color);
+}
+
+.diff-line .line-prefix {
+    width: 20px;
+    padding: 0 4px;
+    user-select: none;
+}
+
+.diff-line.added .line-prefix {
+    color: rgb(46, 160, 67);
+}
+
+.diff-line.removed .line-prefix {
+    color: rgb(248, 81, 73);
+}
+
+.diff-line .line-content {
+    flex: 1;
+    padding-left: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .prompt-actions {
@@ -471,13 +692,6 @@ small.text-muted {
     transform: translateY(-50%);
     color: var(--search-text-color);
     z-index: 1;
-}
-
-.profile-img {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 50%;
 }
 
 .header-actions {
@@ -696,4 +910,137 @@ input:checked + .toggle-slider:before {
         width: 95%;
         padding: 1.5rem;
     }
+}
+
+/* Style dla modalu dodawania promptu */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.create-prompt-modal {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-in-out;
+    border: 1px solid var(--border-color);
+}
+
+/* Zwiększenie kontrastu dla nagłówka i stopki modalu */
+.modal-header, .modal-footer {
+    background-color: var(--header-background);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-control {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    border-radius: 6px;
+}
+
+/* Kopiujemy styl z paska wyszukiwania dla lepszej czytelności */
+.modal-body .form-control {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding-left: 1rem;
+    height: auto;
+}
+
+.modal-body .form-control::placeholder {
+    color: var(--search-text-color);
+    opacity: 0.7;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+}
+
+.prompt-textarea {
+    font-family: Consolas, Monaco, 'Andale Mono', monospace;
+    resize: vertical;
+    min-height: 200px;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    padding: 1rem;
+}
+
+/* Poprawiona stylistyka przycisków w stopce modalu */
+.cancel-btn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+}
+
+.save-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+.save-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
 }

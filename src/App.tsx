@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+// Usuwamy nieużywany import
+// import { useAuthenticator } from '@aws-amplify/ui-react';
 import './App.css';
 
 // Definicje typów
@@ -46,6 +47,13 @@ interface PromptHistoryItem {
     content: string;
 }
 
+// Interfejs dla linii tekstu z porównaniem
+interface DiffLine {
+    type: 'added' | 'removed' | 'unchanged';
+    content: string;
+    lineNumber?: number;
+}
+
 // Definicja interfejsu dla prompt
 interface Prompt {
     id: number;
@@ -59,16 +67,116 @@ interface Prompt {
     history?: PromptHistoryItem[];
 }
 
+// Funkcja do porównania dwóch tekstów i zwrócenia różnic w stylu GitHub
+const compareTexts = (oldText: string, newText: string): DiffLine[] => {
+    const oldLines = oldText.split('\n');
+    const newLines = newText.split('\n');
+    const diffLines: DiffLine[] = [];
+
+    let i = 0, j = 0;
+
+    while (i < oldLines.length || j < newLines.length) {
+        if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+            // Linie są identyczne
+            diffLines.push({
+                type: 'unchanged',
+                content: oldLines[i],
+                lineNumber: i + 1
+            });
+            i++;
+            j++;
+        } else {
+            // Sprawdź, czy linia została usunięta
+            let found = false;
+            for (let k = i + 1; k < Math.min(i + 4, oldLines.length); k++) {
+                if (j < newLines.length && oldLines[k] === newLines[j]) {
+                    // Znaleziono dopasowanie, więc linie od i do k-1 zostały usunięte
+                    for (let l = i; l < k; l++) {
+                        diffLines.push({
+                            type: 'removed',
+                            content: oldLines[l],
+                            lineNumber: l + 1
+                        });
+                    }
+                    i = k;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                // Sprawdź, czy linia została dodana
+                for (let k = j + 1; k < Math.min(j + 4, newLines.length); k++) {
+                    if (i < oldLines.length && newLines[k] === oldLines[i]) {
+                        // Znaleziono dopasowanie, więc linie od j do k-1 zostały dodane
+                        for (let l = j; l < k; l++) {
+                            diffLines.push({
+                                type: 'added',
+                                content: newLines[l],
+                                lineNumber: l + 1
+                            });
+                        }
+                        j = k;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    // Jeśli nadal nie znaleziono dopasowania, traktuj bieżącą linię jako zmodyfikowaną (usunięcie + dodanie)
+                    if (i < oldLines.length) {
+                        diffLines.push({
+                            type: 'removed',
+                            content: oldLines[i],
+                            lineNumber: i + 1
+                        });
+                        i++;
+                    }
+
+                    if (j < newLines.length) {
+                        diffLines.push({
+                            type: 'added',
+                            content: newLines[j],
+                            lineNumber: j + 1
+                        });
+                        j++;
+                    }
+                }
+            }
+        }
+    }
+
+    return diffLines;
+};
+
 const App: React.FC = () => {
 
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
-    const [, setIsSidebarCollapsed] = useState<boolean>(true); // Domyślnie zwinięty
+    // Usuwamy nieużywaną zmienną isSidebarCollapsed
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-    const { signOut } = useAuthenticator();
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
+    const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
+    const [newPrompt, setNewPrompt] = useState<{
+        title: string;
+        description: string;
+        tags: string;
+        content: string;
+    }>({
+        title: '',
+        description: '',
+        tags: '',
+        content: ''
+    });
+
+    // Bezpieczna obsługa signOut bez warunkowego wywołania hooka
+    const signOutFunction = () => {
+        console.log('Wylogowanie (tryb lokalny)');
+        alert('Wylogowanie w trybie lokalnym - funkcja symulowana');
+    };
 
     // Przykładowe dane
     const sidebarCategories: SidebarCategory[] = [
@@ -337,6 +445,25 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         }
     }, []);
 
+    // Obsługa kliknięcia poza menu profilu - poprawiona wersja
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            const profileMenuContainer = document.querySelector('.profile-menu-container');
+            if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+
+        if (isProfileMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isProfileMenuOpen]);
+
     // Obsługa zmiany motywu
     const toggleTheme = () => {
         setIsDarkTheme(prev => !prev);
@@ -363,7 +490,6 @@ For each critique point, please suggest a specific, actionable improvement. Bala
     // Pokaż pasek boczny
     const showSidebar = () => {
         setIsSidebarVisible(true);
-        setIsSidebarCollapsed(false); // Zapewniamy, że pasek jest rozwinięty
     };
 
     // Obsługa kliknięcia w logo
@@ -401,6 +527,52 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     console.error('Failed to copy: ', err);
                 });
         }
+    };
+
+    // Obsługa menu profilu - poprawiona wersja
+    const toggleProfileMenu = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Zatrzymujemy propagację wydarzenia
+        setIsProfileMenuOpen(prev => !prev);
+    };
+
+    // Wyodrębniona funkcja wylogowywania
+    const handleSignOut = () => {
+        signOutFunction();
+        setIsProfileMenuOpen(false); // Zamykamy menu po wylogowaniu
+    };
+
+    // Obsługa otwierania formularza nowego promptu
+    const openCreatePrompt = () => {
+        setIsCreatePromptOpen(true);
+    };
+
+    // Obsługa zamknięcia formularza nowego promptu
+    const closeCreatePrompt = () => {
+        setIsCreatePromptOpen(false);
+        setNewPrompt({
+            title: '',
+            description: '',
+            tags: '',
+            content: ''
+        });
+    };
+
+    // Obsługa zmiany pól nowego promptu
+    const handleNewPromptChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setNewPrompt(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    // Obsługa zapisania nowego promptu
+    const handleSavePrompt = () => {
+        // Tutaj dodalibyśmy logikę zapisywania promptu do bazy danych
+        // W trybie lokalnym możemy wyświetlić alert
+        console.log('Zapisany prompt:', newPrompt);
+        alert('Prompt został zapisany! (symulacja w trybie lokalnym)');
+        closeCreatePrompt();
     };
 
     // Komponent karty promptu
@@ -445,20 +617,45 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
         // Stan dla kontroli widoczności historii
         const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+        // Stan dla trybu porównania
+        const [isCompareMode, setIsCompareMode] = useState<boolean>(false);
+        // Stan dla linii różnic
+        const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
 
         // Przywrócenie do aktualnej wersji przy zamknięciu
         useEffect(() => {
             if (isOpen) {
                 setSelectedVersion(null);
                 setIsHistoryOpen(false);
+                setIsCompareMode(false);
             }
         }, [isOpen]);
+
+        // Efekt do generowania diff przy zmianie wersji
+        useEffect(() => {
+            if (isCompareMode && selectedVersion !== null && history) {
+                const selectedContent = history.find(item => item.version === selectedVersion)?.content || '';
+                const nextVersionItem = history.find(item => item.version === selectedVersion + 1);
+                const nextContent = nextVersionItem ? nextVersionItem.content : promptContent;
+
+                const diffs = compareTexts(selectedContent, nextContent);
+                setDiffLines(diffs);
+            }
+        }, [isCompareMode, selectedVersion, history, promptContent]);
 
         if (!isOpen) return null;
 
         // Funkcja do wyświetlenia wersji z historii
         const showHistoryVersion = (version: number) => {
             setSelectedVersion(version);
+            setIsCompareMode(false);
+        };
+
+        // Funkcja do przełączania trybu porównania
+        const toggleCompareMode = () => {
+            if (selectedVersion !== null) {
+                setIsCompareMode(!isCompareMode);
+            }
         };
 
         // Wybieramy odpowiednią zawartość promptu
@@ -491,9 +688,36 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                 </div>
 
                 <div className="prompt-content-section">
-                    <h4>Prompt:</h4>
+                    <div className="prompt-header">
+                        <h4>Prompt:</h4>
+                        {selectedVersion !== null && history && (
+                            <button
+                                className={`btn compare-btn ${isCompareMode ? 'active' : ''}`}
+                                onClick={toggleCompareMode}
+                                disabled={selectedVersion === history.length}
+                            >
+                                <i className={`bi ${isCompareMode ? 'bi-code-slash' : 'bi-git'}`}></i>
+                                {isCompareMode ? 'Pokaż normalnie' : 'Pokaż zmiany'}
+                            </button>
+                        )}
+                    </div>
                     <div className="prompt-content-box">
-                        {displayContent}
+                        {isCompareMode && diffLines.length > 0 ? (
+                            <div className="diff-view">
+                                {diffLines.map((line, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`diff-line ${line.type}`}
+                                    >
+                                        <span className="line-number">{line.lineNumber}</span>
+                                        <span className="line-prefix">{line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}</span>
+                                        <span className="line-content">{line.content}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            displayContent
+                        )}
                     </div>
                 </div>
 
@@ -610,10 +834,41 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                             </label>
                             <span className="theme-toggle-label">Dark</span>
                         </div>
-                        <button className="btn create-prompt-btn">
+                        <button className="btn create-prompt-btn" onClick={openCreatePrompt}>
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
-                        <img src="https://via.placeholder.com/40" alt="Profile" className="profile-img" />
+                        {/* Poprawiony komponent menu profilu */}
+                        <div className="profile-menu-container">
+                            <img
+                                src="https://via.placeholder.com/40"
+                                alt="Profile"
+                                className="profile-img"
+                                onClick={toggleProfileMenu}
+                            />
+                            {isProfileMenuOpen && (
+                                <div className="profile-dropdown">
+                                    <div className="dropdown-menu">
+                                        <a href="#" className="dropdown-item">
+                                            <i className="bi bi-person me-2"></i>
+                                            Profil
+                                        </a>
+                                        <a href="#" className="dropdown-item">
+                                            <i className="bi bi-sliders me-2"></i>
+                                            Preferencje
+                                        </a>
+                                        <button
+                                            onClick={handleSignOut}
+                                            className="dropdown-item logout-btn"
+                                            aria-label="Wyloguj"
+                                            title="Wyloguj"
+                                        >
+                                            <i className="bi bi-box-arrow-right me-2"></i>
+                                            Wyloguj
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -660,7 +915,81 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     </div>
                 )}
             </div>
-            <button onClick={signOut}>Sign out</button>
+
+            {/* Modal do tworzenia nowego promptu */}
+            {isCreatePromptOpen && (
+                <div className="modal-overlay">
+                    <div className="create-prompt-modal">
+                        <div className="modal-header">
+                            <h3>Nowy prompt</h3>
+                            <button className="btn close-btn" onClick={closeCreatePrompt}>
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group mb-3">
+                                <label htmlFor="prompt-title">Tytuł</label>
+                                <input
+                                    type="text"
+                                    id="prompt-title"
+                                    name="title"
+                                    className="form-control"
+                                    value={newPrompt.title}
+                                    onChange={handleNewPromptChange}
+                                    placeholder="Podaj tytuł promptu"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="form-group mb-3">
+                                <label htmlFor="prompt-description">Opis</label>
+                                <input
+                                    type="text"
+                                    id="prompt-description"
+                                    name="description"
+                                    className="form-control"
+                                    value={newPrompt.description}
+                                    onChange={handleNewPromptChange}
+                                    placeholder="Krótki opis promptu"
+                                />
+                            </div>
+                            <div className="form-group mb-3">
+                                <label htmlFor="prompt-tags">Tagi (oddzielone przecinkami)</label>
+                                <input
+                                    type="text"
+                                    id="prompt-tags"
+                                    name="tags"
+                                    className="form-control"
+                                    value={newPrompt.tags}
+                                    onChange={handleNewPromptChange}
+                                    placeholder="np. SEO, Content, Blog"
+                                />
+                            </div>
+                            <div className="form-group mb-3">
+                                <label htmlFor="prompt-content">Treść promptu</label>
+                                <textarea
+                                    id="prompt-content"
+                                    name="content"
+                                    className="form-control prompt-textarea"
+                                    value={newPrompt.content}
+                                    onChange={handleNewPromptChange}
+                                    placeholder="Wpisz treść promptu..."
+                                    rows={10}
+                                ></textarea>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn cancel-btn" onClick={closeCreatePrompt}>Anuluj</button>
+                            <button
+                                className="btn save-btn"
+                                onClick={handleSavePrompt}
+                                disabled={!newPrompt.title || !newPrompt.content}
+                            >
+                                Zapisz
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

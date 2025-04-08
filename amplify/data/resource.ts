@@ -31,7 +31,8 @@ const schema = a.schema({
       versionNumber: a.string().required(),
       creationDate: a.datetime().required(),
       promptId: a.id().required(), // Klucz obcy do Prompt
-      prompt: a.belongsTo("Prompt", 'promptId') // Relacja do nadrzędnego promptu
+      prompt: a.belongsTo("Prompt", 'promptId'), // Relacja do nadrzędnego promptu
+      latestForPrompt: a.hasOne("Prompt", "latestVersionId"),
     })
     .authorization((allow) => [allow.publicApiKey()]),
 

@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import './App.css';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../amplify/data/resource';
+
+const client = generateClient<Schema>();
+
 
 // Definicje typów
 interface SubmenuItem {
@@ -68,7 +73,9 @@ const App: React.FC = () => {
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+    const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
     const { signOut } = useAuthenticator();
+
 
     // Przykładowe dane
     const sidebarCategories: SidebarCategory[] = [
@@ -115,217 +122,7 @@ const App: React.FC = () => {
         }
     ];
 
-    // Referencja do danych promptów, używana w komponencie
-    const prompts: Prompt[] = [
-        {
-            id: 1,
-            title: 'SEO Blog Post Generator',
-            description: 'Create SEO-optimized blog posts with proper headings, keywords, and meta descriptions.',
-            tags: ['SEO', 'Content', 'Blog'],
-            author: 'John Doe',
-            date: '2 days ago',
-            usageCount: 3457,
-            promptContent: `I want you to act as a professional content writer and SEO expert. Create a comprehensive blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. An attention-grabbing headline with the target keyword "[KEYWORD]"
-2. A compelling introduction that engages the reader and sets up the topic
-3. At least 5 sections with H2 headings that cover different aspects of the topic
-4. 1-2 H3 subheadings under each H2 section for better organization
-5. Naturally incorporated related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2], [RELATED KEYWORD 3]
-6. A minimum of 1,500 words of valuable, informative content
-7. Practical examples, case studies, or statistics to support main points
-8. A conclusion that summarizes key takeaways and includes a call-to-action
-9. 3 FAQs about the topic with detailed answers
-10. Meta description of 150-160 characters that includes the main keyword and entices clicks
-
-Format the content in Markdown. Make the content engaging, authoritative, and valuable to readers while ensuring it follows SEO best practices.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '10 days ago',
-                    changes: 'Initial version',
-                    content: `I want you to act as a content writer and SEO expert. Create a blog post about [TOPIC] optimized for SEO.
-
-Your blog post should include:
-1. A headline with the keyword "[KEYWORD]"
-2. An introduction 
-3. 3-4 sections with headings
-4. Related keywords
-5. A conclusion with call-to-action
-6. 2 FAQs
-
-Format in Markdown.`
-                },
-                {
-                    version: 2,
-                    date: '7 days ago',
-                    changes: 'Added more structure and details',
-                    content: `I want you to act as a professional content writer and SEO expert. Create a blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. A headline with the target keyword "[KEYWORD]"
-2. An introduction that engages the reader
-3. At least 4 sections with H2 headings
-4. Related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2]
-5. About 1,000 words of content
-6. Examples or statistics 
-7. A conclusion with a call-to-action
-8. 2 FAQs about the topic
-9. Meta description
-
-Format in Markdown.`
-                },
-                {
-                    version: 3,
-                    date: '2 days ago',
-                    changes: 'Expanded requirements and added more details',
-                    content: `I want you to act as a professional content writer and SEO expert. Create a comprehensive blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. An attention-grabbing headline with the target keyword "[KEYWORD]"
-2. A compelling introduction that engages the reader and sets up the topic
-3. At least 5 sections with H2 headings that cover different aspects of the topic
-4. 1-2 H3 subheadings under each H2 section for better organization
-5. Naturally incorporated related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2], [RELATED KEYWORD 3]
-6. A minimum of 1,500 words of valuable, informative content
-7. Practical examples, case studies, or statistics to support main points
-8. A conclusion that summarizes key takeaways and includes a call-to-action
-9. 3 FAQs about the topic with detailed answers
-10. Meta description of 150-160 characters that includes the main keyword and entices clicks
-
-Format the content in Markdown. Make the content engaging, authoritative, and valuable to readers while ensuring it follows SEO best practices.`
-                }
-            ]
-        },
-        {
-            id: 2,
-            title: 'Code Refactoring Assistant',
-            description: 'Helps refactor code for better readability, efficiency, and adherence to best practices.',
-            tags: ['Coding', 'DevTools', 'Refactoring'],
-            author: 'Jane Smith',
-            date: '5 days ago',
-            usageCount: 2145,
-            promptContent: `As a code refactoring expert, please help me improve the following code for [LANGUAGE]. 
-
-My code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Please refactor this code to:
-1. Improve readability
-2. Enhance performance where possible
-3. Follow [LANGUAGE] best practices and design patterns
-4. Reduce redundancy and improve code organization
-5. Add appropriate error handling
-6. Include helpful comments explaining complex parts
-
-For each change you make, please explain your reasoning and the benefits of the improvement.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '12 days ago',
-                    changes: 'Initial version',
-                    content: `As a code reviewer, please help me improve this code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Make it more readable and fix any issues.`
-                },
-                {
-                    version: 2,
-                    date: '5 days ago',
-                    changes: 'More detailed requirements and structure',
-                    content: `As a code refactoring expert, please help me improve the following code for [LANGUAGE]. 
-
-My code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Please refactor this code to:
-1. Improve readability
-2. Enhance performance where possible
-3. Follow [LANGUAGE] best practices and design patterns
-4. Reduce redundancy and improve code organization
-5. Add appropriate error handling
-6. Include helpful comments explaining complex parts
-
-For each change you make, please explain your reasoning and the benefits of the improvement.`
-                }
-            ]
-        },
-        {
-            id: 3,
-            title: 'UI/UX Feedback Expert',
-            description: 'Provides detailed feedback on UI/UX designs with actionable improvement suggestions.',
-            tags: ['Design', 'UI/UX', 'Feedback'],
-            author: 'Alex Johnson',
-            date: '1 week ago',
-            usageCount: 1873,
-            promptContent: `Act as a senior UI/UX design consultant with 15+ years of experience. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like you to provide detailed, professional feedback.
-
-For your analysis, please include:
-
-1. First impressions (visual hierarchy, clarity of purpose, branding)
-2. User flow analysis (evaluate how intuitive the navigation and interactions are)
-3. Specific UI element feedback (color scheme, typography, spacing, element sizing)
-4. Accessibility considerations (contrast, text size, keyboard navigation, screen reader compatibility)
-5. Mobile responsiveness (if applicable)
-6. 3-5 highest priority recommendations for improvement
-7. 2-3 strengths of the current design that should be preserved
-
-For each critique point, please suggest a specific, actionable improvement. Balance your feedback with both positive elements and areas for improvement.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '3 weeks ago',
-                    changes: 'Initial version',
-                    content: `Act as a UI/UX designer. Review my design for [PRODUCT] and give me feedback on:
-                    
-1. Visual design
-2. Usability
-3. Suggestions for improvement`
-                },
-                {
-                    version: 2,
-                    date: '2 weeks ago',
-                    changes: 'Added more specific feedback points',
-                    content: `Act as a UI/UX design consultant. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like your feedback.
-
-Please review:
-1. Visual hierarchy
-2. User flow
-3. Color scheme and typography
-4. Accessibility
-5. Recommendations for improvement`
-                },
-                {
-                    version: 3,
-                    date: '1 week ago',
-                    changes: 'Comprehensive rewrite with detailed structure',
-                    content: `Act as a senior UI/UX design consultant with 15+ years of experience. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like you to provide detailed, professional feedback.
-
-For your analysis, please include:
-
-1. First impressions (visual hierarchy, clarity of purpose, branding)
-2. User flow analysis (evaluate how intuitive the navigation and interactions are)
-3. Specific UI element feedback (color scheme, typography, spacing, element sizing)
-4. Accessibility considerations (contrast, text size, keyboard navigation, screen reader compatibility)
-5. Mobile responsiveness (if applicable)
-6. 3-5 highest priority recommendations for improvement
-7. 2-3 strengths of the current design that should be preserved
-
-For each critique point, please suggest a specific, actionable improvement. Balance your feedback with both positive elements and areas for improvement.`
-                }
-            ]
-        }
-    ];
+    
 
     // Efekty
     useEffect(() => {
@@ -336,6 +133,49 @@ For each critique point, please suggest a specific, actionable improvement. Bala
             document.body.setAttribute('data-theme', 'dark');
         }
     }, []);
+
+    useEffect(() => {
+        const fetchPrompts = async () => {
+          try {
+            const { data: promptList } = await client.models.Prompt.list({
+                selectionSet: [
+                    "id",
+                    "title",
+                    "description",
+                    "tags",
+                    "creationDate",
+                    "lastModifiedDate",
+                    "author.*",
+                    "latestVersion.*",
+                  ]
+            });
+    
+            const transformedPrompts: Prompt[] = promptList.map((p) => ({
+              id: Number(p.id),
+              title: p.title,
+              description: p.description ?? '',
+              tags: (p.tags ?? []).filter((tag): tag is string => tag !== null),
+              author: `${(p as any).author?.name ?? "Unknown"} ${(p as any).author?.surname ?? ""}`,
+
+              date: new Date(p.lastModifiedDate).toLocaleDateString(),
+              usageCount: 0,
+              promptContent: p.latestVersion?.content ?? '',
+              history: (p as any).versions?.items?.map((v: any) => ({
+                version: Number(v.versionNumber),
+                date: new Date(v.creationDate).toLocaleDateString(),
+                changes: `Version ${v.versionNumber}`,
+                content: v.content
+              })) ?? []
+            }));
+    
+            setFetchedPrompts(transformedPrompts);
+          } catch (err) {
+            console.error("Błąd podczas pobierania promptów:", err);
+          }
+        };
+    
+        fetchPrompts();
+      }, []);
 
     // Obsługa zmiany motywu
     const toggleTheme = () => {
@@ -644,16 +484,9 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         </div>
 
                         <div className="row g-4">
-                            {prompts.map((prompt) => (
+                            {fetchedPrompts.map((prompt) => (
                                 <div className="col-lg-4 col-md-6" key={prompt.id}>
-                                    <PromptCard
-                                        title={prompt.title}
-                                        description={prompt.description}
-                                        tags={prompt.tags}
-                                        author={prompt.author}
-                                        date={prompt.date}
-                                        onClick={() => handlePromptClick(prompt)}
-                                    />
+                                <PromptCard {...prompt} onClick={() => handlePromptClick(prompt)} />
                                 </div>
                             ))}
                         </div>

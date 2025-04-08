@@ -51,7 +51,7 @@ const schema = a.schema({
   UserFavoritePrompt: a
     .model({
       userId: a.id().required(), // Klucz obcy do User
-      user: a.belongsTo('user', 'userId'),
+      user: a.belongsTo('User', 'userId'),
       promptId: a.id().required(), // Klucz obcy do Prompt
       prompt: a.belongsTo('Prompt', 'promptId')
     })

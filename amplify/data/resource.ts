@@ -18,7 +18,7 @@ const schema = a.schema({
       creationDate: a.datetime().required(),
       lastModifiedDate: a.datetime().required(),
       latestVersionId: a.id(),
-      author: a.belongsTo('Uuser', 'authorId'),
+      author: a.belongsTo('User', 'authorId'),
       versions: a.hasMany("Version", "promptId"),
       latestVersion: a.belongsTo('Version', 'latestVersionId'),
       favoritedBy: a.hasMany('UserFavoritePrompt', 'promptId')

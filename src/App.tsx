@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import './App.css';
+import './PromptCreator.css';
+import { CreatePromptModal, UserMenu, PromptFormData } from './PromptCreator';
 
 // Definicje typów
 interface SubmenuItem {
@@ -63,12 +65,16 @@ const App: React.FC = () => {
 
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
-    const [, setIsSidebarCollapsed] = useState<boolean>(true); // Domyślnie zwinięty
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true); // Domyślnie zwinięty
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const { signOut } = useAuthenticator();
+    
+    // Nowe stany
+    const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
 
     // Przykładowe dane
     const sidebarCategories: SidebarCategory[] = [
@@ -337,6 +343,21 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         }
     }, []);
 
+    // Zamknięcie menu użytkownika, gdy kliknie się poza nim
+    useEffect(() => {
+        const closeUserMenu = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (isUserMenuOpen && !target.closest('.user-menu') && !target.classList.contains('profile-img')) {
+                setIsUserMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('click', closeUserMenu);
+        return () => {
+            document.removeEventListener('click', closeUserMenu);
+        };
+    }, [isUserMenuOpen]);
+
     // Obsługa zmiany motywu
     const toggleTheme = () => {
         setIsDarkTheme(prev => !prev);
@@ -401,6 +422,20 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     console.error('Failed to copy: ', err);
                 });
         }
+    };
+
+    // Obsługa otwierania/zamykania menu użytkownika
+    const toggleUserMenu = () => {
+        setIsUserMenuOpen(!isUserMenuOpen);
+    };
+
+    // Obsługa zapisywania nowego promptu
+    const handleSavePrompt = (promptData: PromptFormData) => {
+        // Tutaj można dodać logikę zapisywania promptu do backendu
+        console.log('Saving new prompt:', promptData);
+        
+        // W rzeczywistej implementacji tutaj byłoby wysłanie do API
+        // i refresh danych
     };
 
     // Komponent karty promptu
@@ -545,7 +580,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
     };
 
     // Określenie klasy dla sidebar
-    const sidebarClasses = `sidebar ${isSidebarVisible ? 'visible' : ''}`;
+    const sidebarClasses = `sidebar ${isSidebarVisible ? 'visible' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`;
 
     return (
         <div className="app-container">
@@ -610,10 +645,21 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                             </label>
                             <span className="theme-toggle-label">Dark</span>
                         </div>
-                        <button className="btn create-prompt-btn">
+                        <button className="btn create-prompt-btn" onClick={() => setIsCreatePromptOpen(true)}>
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
-                        <img src="https://via.placeholder.com/40" alt="Profile" className="profile-img" />
+                        <img 
+                            src="https://via.placeholder.com/40" 
+                            alt="Profile" 
+                            className="profile-img" 
+                            onClick={toggleUserMenu}
+                        />
+                        
+                        {/* Menu użytkownika */}
+                        <UserMenu 
+                            isOpen={isUserMenuOpen} 
+                            onSignOut={signOut}
+                        />
                     </div>
                 </div>
 
@@ -660,7 +706,13 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     </div>
                 )}
             </div>
-            <button onClick={signOut}>Sign out</button>
+            
+            {/* Modal tworzenia promptu */}
+            <CreatePromptModal
+                isOpen={isCreatePromptOpen}
+                onClose={() => setIsCreatePromptOpen(false)}
+                onSave={handleSavePrompt}
+            />
         </div>
     );
 };

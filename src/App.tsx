@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-// Usuwamy nieużywany import
-// import { useAuthenticator } from '@aws-amplify/ui-react';
+import React, {useState, useEffect, useRef} from 'react';
+import DiffEditor, {DiffMethod} from 'react-diff-viewer-continued'; // nowa biblioteka do porównywania tekstu.
 import './App.css';
 
 // Definicje typów
@@ -37,6 +36,7 @@ interface PromptDetailProps {
     promptContent: string;
     // Dodajemy historię wersji do promptu
     history?: PromptHistoryItem[];
+    onEdit: () => void; // Funkcja do obsługi przycisku edycji
 }
 
 // Nowy interfejs dla elementu historii promptu
@@ -47,11 +47,31 @@ interface PromptHistoryItem {
     content: string;
 }
 
-// Interfejs dla linii tekstu z porównaniem
-interface DiffLine {
-    type: 'added' | 'removed' | 'unchanged';
-    content: string;
-    lineNumber?: number;
+// Interfejs dla członka zespołu
+interface TeamMember {
+    id: number;
+    name: string;
+    email: string;
+    role: 'leader' | 'member';
+    avatar: string;
+    joinDate: string;
+}
+
+// Interfejs dla modalu zespołu
+interface TeamModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    members: TeamMember[];
+    currentUserRole: 'leader' | 'member';
+    teamPrompts: Prompt[];
+}
+
+// Nowy interfejs dla okna edycji promptu
+interface EditPromptProps {
+    isOpen: boolean;
+    onClose: () => void;
+    prompt: Prompt;
+    onSave: (updatedPrompt: Prompt) => void;
 }
 
 // Definicja interfejsu dla prompt
@@ -67,89 +87,18 @@ interface Prompt {
     history?: PromptHistoryItem[];
 }
 
-// Funkcja do porównania dwóch tekstów i zwrócenia różnic w stylu GitHub
-const compareTexts = (oldText: string, newText: string): DiffLine[] => {
-    const oldLines = oldText.split('\n');
-    const newLines = newText.split('\n');
-    const diffLines: DiffLine[] = [];
-
-    let i = 0, j = 0;
-
-    while (i < oldLines.length || j < newLines.length) {
-        if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
-            // Linie są identyczne
-            diffLines.push({
-                type: 'unchanged',
-                content: oldLines[i],
-                lineNumber: i + 1
-            });
-            i++;
-            j++;
-        } else {
-            // Sprawdź, czy linia została usunięta
-            let found = false;
-            for (let k = i + 1; k < Math.min(i + 4, oldLines.length); k++) {
-                if (j < newLines.length && oldLines[k] === newLines[j]) {
-                    // Znaleziono dopasowanie, więc linie od i do k-1 zostały usunięte
-                    for (let l = i; l < k; l++) {
-                        diffLines.push({
-                            type: 'removed',
-                            content: oldLines[l],
-                            lineNumber: l + 1
-                        });
-                    }
-                    i = k;
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-                // Sprawdź, czy linia została dodana
-                for (let k = j + 1; k < Math.min(j + 4, newLines.length); k++) {
-                    if (i < oldLines.length && newLines[k] === oldLines[i]) {
-                        // Znaleziono dopasowanie, więc linie od j do k-1 zostały dodane
-                        for (let l = j; l < k; l++) {
-                            diffLines.push({
-                                type: 'added',
-                                content: newLines[l],
-                                lineNumber: l + 1
-                            });
-                        }
-                        j = k;
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    // Jeśli nadal nie znaleziono dopasowania, traktuj bieżącą linię jako zmodyfikowaną (usunięcie + dodanie)
-                    if (i < oldLines.length) {
-                        diffLines.push({
-                            type: 'removed',
-                            content: oldLines[i],
-                            lineNumber: i + 1
-                        });
-                        i++;
-                    }
-
-                    if (j < newLines.length) {
-                        diffLines.push({
-                            type: 'added',
-                            content: newLines[j],
-                            lineNumber: j + 1
-                        });
-                        j++;
-                    }
-                }
-            }
-        }
-    }
-
-    return diffLines;
-};
+interface FilterOptions {
+    query?: string;
+    author?: string;
+    tag?: string;
+    date?: string;
+    category?: string;
+    closePanel?: boolean;
+}
 
 const App: React.FC = () => {
+
+
 
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
@@ -160,7 +109,37 @@ const App: React.FC = () => {
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
     const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
+    const [isEditPromptOpen, setIsEditPromptOpen] = useState<boolean>(false);
+    const [selectedCategory, setSelectedCategory] = useState<string>('All');
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const [isTeamModalOpen, setIsTeamModalOpen] = useState<boolean>(false);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [currentUserRole, setCurrentUserRole] = useState<'leader' | 'member'>('member');
+    const [teamPrompts, setTeamPrompts] = useState<Prompt[]>([]);
+
+    const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+    // Stan dla filtrów wyszukiwania
+    const [searchFilters, setSearchFilters] = useState<{
+        query: string;
+        author: string;
+        tag: string;
+        date: string;
+    }>({
+        query: '',
+        author: '',
+        tag: '',
+        date: ''
+    });
+
+    // Stan dla widoczności panelu filtrów
+    const [isFilterPanelVisible, setIsFilterPanelVisible] = useState<boolean>(false);
+
+    // Stan dla przechowywania wyfiltrowanych promptów
+    const [filteredPrompts, setFilteredPrompts] = useState<Prompt[]>([])
+
+
     const [newPrompt, setNewPrompt] = useState<{
+
         title: string;
         description: string;
         tags: string;
@@ -186,6 +165,15 @@ const App: React.FC = () => {
             items: [
                 { label: 'Dashboard', path: '/dashboard' },
                 { label: 'Recent Prompts', path: '/recent' }
+            ]
+        },
+        {
+            icon: 'bi-people',
+            label: 'Team',
+            items: [
+                { label: 'Team Members', path: '/team/members' },
+                { label: 'Team Prompts', path: '/team/prompts' },
+                { label: 'Alter Members', path: '/team/add' }
             ]
         },
         {
@@ -430,8 +418,38 @@ For your analysis, please include:
 7. 2-3 strengths of the current design that should be preserved
 
 For each critique point, please suggest a specific, actionable improvement. Balance your feedback with both positive elements and areas for improvement.`
+
+
                 }
             ]
+        }
+    ];
+
+    // Przykładowe dane członków zespołu
+    const initialTeamMembers: TeamMember[] = [
+        {
+            id: 1,
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            role: 'leader',
+            avatar: 'https://via.placeholder.com/40',
+            joinDate: '3 months ago'
+        },
+        {
+            id: 2,
+            name: 'Jane Smith',
+            email: 'jane.smith@example.com',
+            role: 'member',
+            avatar: 'https://via.placeholder.com/40',
+            joinDate: '2 months ago'
+        },
+        {
+            id: 3,
+            name: 'Alex Johnson',
+            email: 'alex.johnson@example.com',
+            role: 'member',
+            avatar: 'https://via.placeholder.com/40',
+            joinDate: '1 month ago'
         }
     ];
 
@@ -463,6 +481,18 @@ For each critique point, please suggest a specific, actionable improvement. Bala
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isProfileMenuOpen]);
+
+    // Efekt inicjalizujący dane zespołu
+    useEffect(() => {
+        // W wersji produkcyjnej tutaj byłoby pobieranie danych z API
+        setTeamMembers(initialTeamMembers);
+
+        // Ustawiamy rolę bieżącego użytkownika (w produkcji pobierane z API)
+        setCurrentUserRole('leader');
+
+        // Inicjalizujemy prompty zespołu - dla przykładu używamy pierwszych dwóch standardowych promptów
+        setTeamPrompts(prompts.slice(0, 2));
+    }, []);
 
     // Obsługa zmiany motywu
     const toggleTheme = () => {
@@ -508,6 +538,21 @@ For each critique point, please suggest a specific, actionable improvement. Bala
     // Obsługa rozwijania/zwijania kategorii
     const toggleCategory = (index: number) => {
         setOpenCategoryIndex(prev => prev === index ? null : index);
+    };
+
+    // Obsługa kliknięcia w element podmenu
+    const handleSubmenuItemClick = (path: string) => {
+        // Obsługa elementów podmenu Team
+        if (path === '/team/members') {
+            setIsTeamModalOpen(true);
+        } else if (path === '/team/prompts') {
+            setIsTeamModalOpen(true);
+            // Tutaj można dodać dodatkową logikę, np. ustawienie odpowiedniej zakładki w modalu
+        } else if (path === '/team/add') {
+            setIsTeamModalOpen(true);
+            // Tutaj można dodać dodatkową logikę
+        }
+        // Dla innych elementów możemy dodać obsługę nawigacji
     };
 
     // Obsługa kliknięcia w prompt
@@ -575,6 +620,245 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         closeCreatePrompt();
     };
 
+    // Obsługa otwarcia okna edycji promptu
+    const handleEditPrompt = () => {
+        if (selectedPrompt) {
+            setEditingPrompt(selectedPrompt);
+            setIsEditPromptOpen(true);
+            setIsPromptDetailOpen(false); // Zamykamy podgląd szczegółów
+        }
+    };
+
+// Obsługa zapisania zmian w promptcie
+    const handleSaveEditedPrompt = (updatedPrompt: Prompt) => {
+        // W wersji produkcyjnej tutaj byłoby wywołanie API do aktualizacji promptu
+        console.log('Aktualizacja promptu:', updatedPrompt);
+        alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
+
+        // Aktualizujemy prompt lokalnie (mockup)
+        prompts.map(p =>
+            p.id === updatedPrompt.id ? updatedPrompt : p
+        );
+
+        // Aktualizujemy wybrany prompt
+        setSelectedPrompt(updatedPrompt);
+
+        // Zamykamy okno edycji i otwieramy ponownie podgląd
+        setIsEditPromptOpen(false);
+        setIsPromptDetailOpen(true);
+    };
+
+    // Obsługa otwarcia modalu zespołu
+// Obsługa zamknięcia modalu zespołu
+    const handleCloseTeamModal = () => {
+        setIsTeamModalOpen(false);
+    };
+
+// Obsługa usunięcia członka zespołu
+    const handleRemoveTeamMember = (memberId: number) => {
+        // W wersji produkcyjnej tutaj byłoby wywołanie API
+        setTeamMembers(prevMembers =>
+            prevMembers.filter(member => member.id !== memberId)
+        );
+        alert('Członek zespołu został usunięty! (symulacja w trybie lokalnym)');
+    };
+
+// Obsługa zmiany roli członka zespołu
+    const handleChangeRole = (memberId: number, newRole: 'leader' | 'member') => {
+        // W wersji produkcyjnej tutaj byłoby wywołanie API
+        setTeamMembers(prevMembers =>
+            prevMembers.map(member =>
+                member.id === memberId ? {...member, role: newRole} : member
+            )
+        );
+
+        // Jeśli zmieniamy kogoś na lidera, to obecny lider staje się członkiem
+        if (newRole === 'leader') {
+            setTeamMembers(prevMembers =>
+                prevMembers.map(member =>
+                    member.role === 'leader' && member.id !== memberId ?
+                        {...member, role: 'member'} : member
+                )
+            );
+
+            // Jeśli to my jesteśmy liderem i przekazujemy uprawnienia, zmieniamy swój status
+            if (currentUserRole === 'leader') {
+                setCurrentUserRole('member');
+            }
+        }
+
+        alert(`Rola została zmieniona na ${newRole}! (symulacja w trybie lokalnym)`);
+    };
+
+// Obsługa dodania nowego członka zespołu
+    const handleAddTeamMember = (email: string) => {
+        // W wersji produkcyjnej tutaj byłoby wywołanie API
+        const newMember: TeamMember = {
+            id: Date.now(), // Tymczasowe ID
+            name: `New Member (${email})`,
+            email,
+            role: 'member',
+            avatar: 'https://via.placeholder.com/40',
+            joinDate: 'Just now'
+        };
+
+        setTeamMembers(prevMembers => [...prevMembers, newMember]);
+        alert('Zaproszenie zostało wysłane! (symulacja w trybie lokalnym)');
+    };
+
+
+// Zbierz wartości z pól formularza i zastosuj filtry
+    const collectAndApplyFilters = () => {
+        // Zbierz wartości z pól formularza
+        const query = (document.getElementById('filter-query') as HTMLInputElement)?.value || '';
+        const author = (document.getElementById('filter-author') as HTMLInputElement)?.value || '';
+        const tag = (document.getElementById('filter-tag') as HTMLInputElement)?.value || '';
+        const date = (document.getElementById('filter-date') as HTMLInputElement)?.value || '';
+
+        // Przygotuj nowy obiekt filtrów
+        const newFilters = {
+            query,
+            author,
+            tag,
+            date
+        };
+
+        // Aktualizuj stan i zastosuj filtry
+        setSearchFilters(newFilters);
+        applyFilters({ ...newFilters, closePanel: true });
+    };
+
+// Obsługa resetowania filtrów
+    const resetFilters = () => {
+        // Resetujemy wartość wszystkich pól
+        ['filter-query', 'filter-author', 'filter-tag', 'filter-date'].forEach(id => {
+            const input = document.getElementById(id) as HTMLInputElement;
+            if (input) input.value = '';
+        });
+
+        // Resetujemy wartość pola wyszukiwania w nagłówku
+        if (searchInputRef.current) {
+            searchInputRef.current.value = '';
+        }
+
+        // Używamy uniwersalnej funkcji filtrowania z pustymi wartościami
+        applyFilters({
+            query: '',
+            author: '',
+            tag: '',
+            date: '',
+            closePanel: true
+        });
+    };
+
+    // Uniwersalna funkcja filtrująca
+    const applyFilters = (options: FilterOptions = {}) => {
+        // Pobieranie opcji z parametrów lub używanie aktualnych wartości
+        const filterQuery = options.query !== undefined ? options.query : searchFilters.query;
+        const filterAuthor = options.author !== undefined ? options.author : searchFilters.author;
+        const filterTag = options.tag !== undefined ? options.tag : searchFilters.tag;
+        const filterDate = options.date !== undefined ? options.date : searchFilters.date;
+        const filterCategory = options.category !== undefined ? options.category : selectedCategory;
+
+        // Rozpoczynamy od wszystkich promptów
+        let filtered = [...prompts];
+
+        // Filtrowanie po kategorii/tagu głównym
+        if (filterCategory !== 'All') {
+            filtered = filtered.filter(prompt =>
+                prompt.tags.some(tag => tag === filterCategory)
+            );
+        }
+
+        // Filtrowanie po frazie wyszukiwania
+        if (filterQuery.trim()) {
+            const query = filterQuery.toLowerCase().trim();
+            filtered = filtered.filter(prompt =>
+                prompt.title.toLowerCase().includes(query) ||
+                prompt.description.toLowerCase().includes(query)
+            );
+        }
+
+        // Filtrowanie po autorze
+        if (filterAuthor.trim()) {
+            const author = filterAuthor.toLowerCase().trim();
+            filtered = filtered.filter(prompt =>
+                prompt.author.toLowerCase().includes(author)
+            );
+        }
+
+        // Filtrowanie po tagu
+        if (filterTag.trim()) {
+            const tag = filterTag.toLowerCase().trim();
+            filtered = filtered.filter(prompt =>
+                prompt.tags.some(t => t.toLowerCase().includes(tag))
+            );
+        }
+
+        // Filtrowanie po dacie
+        if (filterDate.trim()) {
+            const date = filterDate.toLowerCase().trim();
+            filtered = filtered.filter(prompt =>
+                prompt.date.toLowerCase().includes(date)
+            );
+        }
+
+        // Aktualizujemy stan wyfiltrowanych promptów
+        setFilteredPrompts(filtered);
+
+        // Aktualizujemy stan filtrów, jeśli podano opcje
+        if (Object.keys(options).length > 0) {
+            setSearchFilters({
+                query: filterQuery,
+                author: filterAuthor,
+                tag: filterTag,
+                date: filterDate
+            });
+
+            // Aktualizujemy wybraną kategorię, jeśli została zmieniona
+            if (options.category !== undefined) {
+                setSelectedCategory(filterCategory);
+            }
+        }
+
+        // Opcjonalnie zamykamy panel filtrów
+        if (options.closePanel) {
+            setIsFilterPanelVisible(false);
+        }
+    };
+
+    const handleCategoryChange = (category: string) => {
+        // Użyj uniwersalnej funkcji filtrowania
+        applyFilters({ category });
+    };
+
+    // Efekt do inicjalizacji filtrowanych promptów przy pierwszym renderowaniu
+    useEffect(() => {
+        applyFilters();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // Efekt uruchamiany tylko przy pierwszym renderowaniu i zmianach kategorii
+    useEffect(() => {
+        // Inicjalizacja filtrów przy pierwszym renderowaniu
+        if (filteredPrompts.length === 0) {
+            applyFilters();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const query = e.target.value;
+
+        // Użyj uniwersalnej funkcji filtrowania
+        applyFilters({ query });
+    };
+
+// Obsługa wyświetlania/ukrywania panelu filtrów
+    const toggleFilterPanel = () => {
+        setIsFilterPanelVisible(prev => !prev);
+    };
+
     // Komponent karty promptu
     const PromptCard: React.FC<PromptCardProps> = ({ title, description, tags, author, date, onClick }) => {
         return (
@@ -611,7 +895,8 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                                                            date,
                                                            usageCount,
                                                            promptContent,
-                                                           history
+                                                           history,
+                                                           onEdit
                                                        }) => {
         // Stan dla aktualnie wybranej wersji
         const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
@@ -619,8 +904,9 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
         // Stan dla trybu porównania
         const [isCompareMode, setIsCompareMode] = useState<boolean>(false);
-        // Stan dla linii różnic
-        const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
+        // Stany dla przechowywania starej i nowej zawartości do porównania
+        const [oldContent, setOldContent] = useState<string>('');
+        const [newContent, setNewContent] = useState<string>('');
 
         // Przywrócenie do aktualnej wersji przy zamknięciu
         useEffect(() => {
@@ -631,17 +917,36 @@ For each critique point, please suggest a specific, actionable improvement. Bala
             }
         }, [isOpen]);
 
-        // Efekt do generowania diff przy zmianie wersji
+        // Efekt do aktualizacji zawartości dla porównania przy zmianie wersji
         useEffect(() => {
-            if (isCompareMode && selectedVersion !== null && history) {
+            if (selectedVersion !== null && history) {
                 const selectedContent = history.find(item => item.version === selectedVersion)?.content || '';
+                setOldContent(selectedContent);
+
                 const nextVersionItem = history.find(item => item.version === selectedVersion + 1);
                 const nextContent = nextVersionItem ? nextVersionItem.content : promptContent;
-
-                const diffs = compareTexts(selectedContent, nextContent);
-                setDiffLines(diffs);
+                setNewContent(nextContent);
             }
-        }, [isCompareMode, selectedVersion, history, promptContent]);
+        }, [selectedVersion, history, promptContent]);
+
+        // Efekt utrzymujący fokus w polu wyszukiwania
+        useEffect(() => {
+            // Jeśli input ma focus, zachowaj go po renderowaniu
+            const isInputFocused = document.activeElement === searchInputRef.current;
+            if (isInputFocused && searchInputRef.current) {
+                // Zachowaj pozycję kursora
+                const cursorPosition = searchInputRef.current.selectionStart;
+
+                // Odtwórz fokus po renderowaniu
+                requestAnimationFrame(() => {
+                    if (searchInputRef.current) {
+                        searchInputRef.current.focus();
+                        searchInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                    }
+                });
+            }
+            // }, [searchFilters]); // Ten efekt uruchomi się po każdej zmianie filtrów
+        }, []); // Uruchamiamy tylko przy montowaniu komponentu
 
         if (!isOpen) return null;
 
@@ -702,19 +1007,24 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         )}
                     </div>
                     <div className="prompt-content-box">
-                        {isCompareMode && diffLines.length > 0 ? (
-                            <div className="diff-view">
-                                {diffLines.map((line, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`diff-line ${line.type}`}
-                                    >
-                                        <span className="line-number">{line.lineNumber}</span>
-                                        <span className="line-prefix">{line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}</span>
-                                        <span className="line-content">{line.content}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        {isCompareMode ? (
+                            <DiffEditor
+                                oldValue={oldContent}
+                                newValue={newContent}
+                                splitView={true}
+                                useDarkTheme={document.body.hasAttribute('data-theme') && document.body.getAttribute('data-theme') === 'dark'}
+                                disableWordDiff={false}
+                                showDiffOnly={false}
+                                extraLinesSurroundingDiff={3}
+                                compareMethod={DiffMethod.WORDS}
+                                styles={{
+                                    contentText: {
+                                        fontFamily: 'Consolas, Monaco, "Andale Mono", monospace',
+                                        fontSize: '0.85rem',
+                                        lineHeight: '1.5',
+                                    }
+                                }}
+                            />
                         ) : (
                             displayContent
                         )}
@@ -759,9 +1069,397 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         <button className="btn copy-btn" onClick={copyPromptToClipboard}>
                             <i className="bi bi-clipboard"></i> Copy
                         </button>
+                        <button className="btn edit-btn" onClick={onEdit}>
+                            <i className="bi bi-pencil"></i> Edit
+                        </button>
                         <button className="btn use-btn">
                             Use This Prompt
                         </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const FilterPanel: React.FC<{
+        filters: {
+            query: string;
+            author: string;
+            tag: string;
+            date: string;
+        };
+        onReset: () => void;
+        onApply: () => void;
+        isVisible: boolean;
+    }> = ({ filters, onReset, onApply, isVisible }) => {
+        if (!isVisible) return null;
+
+        return (
+            <div className="filter-panel">
+                <div className="filter-header">
+                    <h4>Filtry wyszukiwania</h4>
+                    <button className="btn reset-btn" onClick={onReset}>
+                        <i className="bi bi-x-circle"></i> Resetuj
+                    </button>
+                </div>
+
+                <div className="filter-body">
+                    <div className="filter-group">
+                        <label htmlFor="filter-query">Szukana fraza:</label>
+                        <input
+                            type="text"
+                            id="filter-query"
+                            name="query"
+                            className="form-control"
+                            defaultValue={filters.query}
+                            placeholder="Wyszukaj..."
+                        />
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="filter-author">Autor:</label>
+                        <input
+                            type="text"
+                            id="filter-author"
+                            name="author"
+                            className="form-control"
+                            defaultValue={filters.author}
+                            placeholder="Nazwa autora..."
+                        />
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="filter-tag">Tag:</label>
+                        <input
+                            type="text"
+                            id="filter-tag"
+                            name="tag"
+                            className="form-control"
+                            defaultValue={filters.tag}
+                            placeholder="Nazwa tagu..."
+                        />
+                    </div>
+
+                    <div className="filter-group">
+                        <label htmlFor="filter-date">Data:</label>
+                        <input
+                            type="text"
+                            id="filter-date"
+                            name="date"
+                            className="form-control"
+                            defaultValue={filters.date}
+                            placeholder="np. 2 days, week..."
+                        />
+                    </div>
+                </div>
+
+                <div className="filter-footer">
+                    <button className="btn apply-btn" onClick={onApply}>
+                        <i className="bi bi-check-circle"></i> Zastosuj filtry
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    // Komponent edycji promptu
+    const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave }) => {
+        const [editedPrompt, setEditedPrompt] = useState<{
+            title: string;
+            description: string;
+            tags: string;
+            content: string;
+        }>({
+            title: prompt?.title || '',
+            description: prompt?.description || '',
+            tags: prompt?.tags?.join(', ') || '',
+            content: prompt?.promptContent || ''
+        });
+
+        useEffect(() => {
+            if (prompt) {
+                setEditedPrompt({
+                    title: prompt.title,
+                    description: prompt.description,
+                    tags: prompt.tags.join(', '),
+                    content: prompt.promptContent
+                });
+            }
+        }, [prompt]);
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            const { name, value } = e.target;
+            setEditedPrompt(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        };
+
+        const handleSubmit = () => {
+            if (!prompt) return;
+
+            // Utworzenie obiektu historii zawierającego aktualną wersję
+            const currentHistoryItem: PromptHistoryItem = {
+                version: (prompt.history?.length || 0) + 1,
+                date: new Date().toLocaleDateString(),
+                changes: 'Edycja promptu',
+                content: prompt.promptContent
+            };
+
+            // Aktualizacja historii
+            const updatedHistory = prompt.history ? [...prompt.history, currentHistoryItem] : [currentHistoryItem];
+
+            // Utworzenie obiektu zaktualizowanego promptu
+            const updatedPrompt: Prompt = {
+                ...prompt,
+                title: editedPrompt.title,
+                description: editedPrompt.description,
+                tags: editedPrompt.tags.split(',').map(tag => tag.trim()),
+                promptContent: editedPrompt.content,
+                date: 'Teraz', // W wersji produkcyjnej użylibyśmy formatowania daty
+                history: updatedHistory
+            };
+
+            onSave(updatedPrompt);
+        };
+
+        if (!isOpen) return null;
+
+        return (
+            <div className="modal-overlay">
+                <div className="create-prompt-modal">
+                    <div className="modal-header">
+                        <h3>Edytuj prompt</h3>
+                        <button className="btn close-btn" onClick={onClose}>
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div className="modal-body">
+                        <div className="form-group mb-3">
+                            <label htmlFor="prompt-title">Tytuł</label>
+                            <input
+                                type="text"
+                                id="prompt-title"
+                                name="title"
+                                className="form-control"
+                                value={editedPrompt.title}
+                                onChange={handleChange}
+                                placeholder="Podaj tytuł promptu"
+                            />
+                        </div>
+                        <div className="form-group mb-3">
+                            <label htmlFor="prompt-description">Opis</label>
+                            <input
+                                type="text"
+                                id="prompt-description"
+                                name="description"
+                                className="form-control"
+                                value={editedPrompt.description}
+                                onChange={handleChange}
+                                placeholder="Krótki opis promptu"
+                            />
+                        </div>
+                        <div className="form-group mb-3">
+                            <label htmlFor="prompt-tags">Tagi (oddzielone przecinkami)</label>
+                            <input
+                                type="text"
+                                id="prompt-tags"
+                                name="tags"
+                                className="form-control"
+                                value={editedPrompt.tags}
+                                onChange={handleChange}
+                                placeholder="np. SEO, Content, Blog"
+                            />
+                        </div>
+                        <div className="form-group mb-3">
+                            <label htmlFor="prompt-content">Treść promptu</label>
+                            <textarea
+                                id="prompt-content"
+                                name="content"
+                                className="form-control prompt-textarea"
+                                value={editedPrompt.content}
+                                onChange={handleChange}
+                                placeholder="Wpisz treść promptu..."
+                                rows={10}
+                            ></textarea>
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn cancel-btn" onClick={onClose}>Anuluj</button>
+                        <button
+                            className="btn save-btn"
+                            onClick={handleSubmit}
+                            disabled={!editedPrompt.title || !editedPrompt.content}
+                        >
+                            Zapisz zmiany
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Komponent modalu zespołu
+    const TeamModal: React.FC<TeamModalProps> = ({
+                                                     isOpen,
+                                                     onClose,
+                                                     members,
+                                                     currentUserRole,
+                                                     teamPrompts
+                                                 }) => {
+        const [activeTab, setActiveTab] = useState<'members' | 'prompts'>('members');
+        const [inviteEmail, setInviteEmail] = useState<string>('');
+
+        if (!isOpen) return null;
+
+        return (
+            <div className="modal-overlay">
+                <div className="create-prompt-modal team-modal">
+                    <div className="modal-header">
+                        <h3>Team Management</h3>
+                        <button className="btn close-btn" onClick={onClose}>
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div className="team-tabs">
+                        <button
+                            className={`btn category-btn me-2 ${activeTab === 'members' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('members')}
+                        >
+                            <i className="bi bi-people me-1"></i> Team Members
+                        </button>
+                        <button
+                            className={`btn category-btn ${activeTab === 'prompts' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('prompts')}
+                        >
+                            <i className="bi bi-collection me-1"></i> Team Prompts
+                        </button>
+                    </div>
+
+                    {activeTab === 'members' ? (
+                        <div className="modal-body team-members-content">
+                            <h4>Team Members</h4>
+
+                            {currentUserRole === 'leader' && (
+                                <div className="invite-form mb-4">
+                                    <div className="input-group">
+                                        <input
+                                            type="email"
+                                            className="form-control"
+                                            placeholder="Enter email to invite"
+                                            value={inviteEmail}
+                                            onChange={(e) => setInviteEmail(e.target.value)}
+                                        />
+                                        <button
+                                            className="btn invite-btn"
+                                            onClick={() => {
+                                                if (inviteEmail.trim()) {
+                                                    handleAddTeamMember(inviteEmail.trim());
+                                                    setInviteEmail('');
+                                                }
+                                            }}
+                                            disabled={!inviteEmail.trim()}
+                                        >
+                                            <i className="bi bi-plus-lg"></i> Invite
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="team-members-list">
+                                {members.map(member => (
+                                    <div key={member.id} className="team-member-item">
+                                        <div className="member-info">
+                                            <img
+                                                src={member.avatar}
+                                                alt={member.name}
+                                                className="member-avatar"
+                                            />
+                                            <div className="member-details">
+                                                <h5>{member.name} {member.role === 'leader' && <span className="leader-badge">Leader</span>}</h5>
+                                                <p>{member.email}</p>
+                                                <small>Joined {member.joinDate}</small>
+                                            </div>
+                                        </div>
+
+                                        {/* Akcje dostępne tylko dla lidera */}
+                                        {currentUserRole === 'leader' && member.id !== 1 && ( // ID 1 to przykładowe ID bieżącego użytkownika
+                                            <div className="member-actions">
+                                                {member.role === 'member' ? (
+                                                    <button
+                                                        className="btn promote-btn"
+                                                        onClick={() => handleChangeRole(member.id, 'leader')}
+                                                        title="Promote to Leader"
+                                                    >
+                                                        <i className="bi bi-star"></i>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className="btn demote-btn"
+                                                        onClick={() => handleChangeRole(member.id, 'member')}
+                                                        title="Demote to Member"
+                                                    >
+                                                        <i className="bi bi-star-fill"></i>
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    className="btn remove-btn"
+                                                    onClick={() => handleRemoveTeamMember(member.id)}
+                                                    title="Remove from Team"
+                                                >
+                                                    <i className="bi bi-x-circle"></i>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="modal-body team-prompts-content">
+                            <h4>Team Prompts</h4>
+                            <p className="mb-3">Access prompts shared by your team members:</p>
+
+                            <div className="team-prompts-list">
+                                {teamPrompts.length > 0 ? (
+                                    <div className="row g-4">
+                                        {teamPrompts.map(prompt => (
+                                            <div className="col-md-6" key={prompt.id}>
+                                                <div className="card prompt-card" onClick={() => handlePromptClick(prompt)}>
+                                                    <div className="card-body">
+                                                        <h5 className="card-title">{prompt.title}</h5>
+                                                        <p className="card-text">{prompt.description}</p>
+                                                        <div className="tags-container">
+                                                            {prompt.tags.map((tag, index) => (
+                                                                <span key={index} className={`badge ${index % 2 === 0 ? 'badge-primary' : 'badge-accent'}`}>
+                                            {tag}
+                                        </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="card-footer py-3">
+                                                        <small className="text-muted">By {prompt.author} • {prompt.date}</small>
+                                                        <button className="btn bookmark-btn">
+                                                            <i className="bi bi-bookmark"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="no-prompts-message">
+                                        <i className="bi bi-collection display-4"></i>
+                                        <p>No team prompts available yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="modal-footer">
+                        <button className="btn cancel-btn" onClick={onClose}>Close</button>
                     </div>
                 </div>
             </div>
@@ -795,7 +1493,11 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                                 </div>
                                 <div className={`submenu ${openCategoryIndex === index ? 'open' : ''}`}>
                                     {category.items.map((item, itemIndex) => (
-                                        <div className="submenu-item" key={itemIndex}>
+                                        <div
+                                            className="submenu-item"
+                                            key={itemIndex}
+                                            onClick={() => handleSubmenuItemClick(item.path)}
+                                        >
                                             {item.label}
                                         </div>
                                     ))}
@@ -819,7 +1521,33 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     )}
                     <div className="search-container">
                         <i className="bi bi-search search-icon"></i>
-                        <input type="text" className="form-control" placeholder="Search prompts..." />
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Search prompts..."
+                            value={searchFilters.query}
+                            onChange={handleSearchInputChange}
+                            ref={searchInputRef}
+                        />
+                        {isFilterPanelVisible !== undefined && (
+                            <button
+                                className={`btn filter-toggle-btn ${isFilterPanelVisible ? 'active' : ''}`}
+                                onClick={toggleFilterPanel}
+                                title="Pokaż/ukryj filtry"
+                            >
+                                <i className="bi bi-funnel"></i>
+                            </button>
+                        )}
+
+                        {/* Panel filtrów - dodaj tylko jeśli masz już komponent FilterPanel */}
+                        {isFilterPanelVisible !== undefined && FilterPanel && (
+                            <FilterPanel
+                                filters={searchFilters}
+                                onReset={resetFilters}
+                                onApply={collectAndApplyFilters}
+                                isVisible={isFilterPanelVisible}
+                            />
+                        )}
                     </div>
                     <div className="header-actions">
                         <div className="theme-toggle">
@@ -885,32 +1613,125 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         usageCount={selectedPrompt.usageCount}
                         promptContent={selectedPrompt.promptContent}
                         history={selectedPrompt.history}
+                        onEdit={handleEditPrompt}
                     />
                 ) : (
                     <div className="content-container">
-                        <div className="mb-4 d-flex justify-content-between align-items-center">
-                            <h3>Popular Prompts</h3>
+                        <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap">
+                            <div className="d-flex align-items-center">
+                                <h3>Prompts</h3>
+                                <span className="prompt-count ms-3">
+      {filteredPrompts.length} z {prompts.length} wyników
+    </span>
+
+                                {/* Wskaźniki aktywnych filtrów */}
+                                {/* Wskaźniki aktywnych filtrów */}
+                                {(searchFilters.author || searchFilters.tag || searchFilters.date) && (
+                                    <div className="active-filters ms-3">
+                                        {searchFilters.author && (
+                                            <span className="filter-badge">
+                Autor: {searchFilters.author}
+                                                <button
+                                                    className="clear-filter-btn"
+                                                    onClick={() => applyFilters({ author: '' })}
+                                                >
+                    <i className="bi bi-x"></i>
+                </button>
+            </span>
+                                        )}
+
+                                        {searchFilters.tag && (
+                                            <span className="filter-badge">
+                Tag: {searchFilters.tag}
+                                                <button
+                                                    className="clear-filter-btn"
+                                                    onClick={() => applyFilters({ tag: '' })}
+                                                >
+                    <i className="bi bi-x"></i>
+                </button>
+            </span>
+                                        )}
+
+                                        {searchFilters.date && (
+                                            <span className="filter-badge">
+                Data: {searchFilters.date}
+                                                <button
+                                                    className="clear-filter-btn"
+                                                    onClick={() => applyFilters({ date: '' })}
+                                                >
+                    <i className="bi bi-x"></i>
+                </button>
+            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
-                                <button className="btn category-btn me-2">All</button>
-                                <button className="btn category-btn me-2">Writing</button>
-                                <button className="btn category-btn me-2">Programming</button>
-                                <button className="btn category-btn">Design</button>
+                                <button
+                                    className={`btn category-btn me-2 ${selectedCategory === 'All' ? 'active' : ''}`}
+                                    onClick={() => handleCategoryChange('All')}
+                                >
+                                    All
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${selectedCategory === 'Writing' ? 'active' : ''}`}
+                                    onClick={() => handleCategoryChange('Writing')}
+                                >
+                                    Writing
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${selectedCategory === 'Programming' ? 'active' : ''}`}
+                                    onClick={() => handleCategoryChange('Programming')}
+                                >
+                                    Programming
+                                </button>
+                                <button
+                                    className={`btn category-btn ${selectedCategory === 'Design' ? 'active' : ''}`}
+                                    onClick={() => handleCategoryChange('Design')}
+                                >
+                                    Design
+                                </button>
                             </div>
                         </div>
 
                         <div className="row g-4">
-                            {prompts.map((prompt) => (
-                                <div className="col-lg-4 col-md-6" key={prompt.id}>
-                                    <PromptCard
-                                        title={prompt.title}
-                                        description={prompt.description}
-                                        tags={prompt.tags}
-                                        author={prompt.author}
-                                        date={prompt.date}
-                                        onClick={() => handlePromptClick(prompt)}
-                                    />
+                            {filteredPrompts.length > 0 ? (
+                                filteredPrompts.map((prompt) => (
+                                    <div className="col-lg-4 col-md-6" key={prompt.id}>
+                                        <PromptCard
+                                            title={prompt.title}
+                                            description={prompt.description}
+                                            tags={prompt.tags}
+                                            author={prompt.author}
+                                            date={prompt.date}
+                                            onClick={() => handlePromptClick(prompt)}
+                                        />
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-12 text-center py-5">
+                                    <div className="no-results">
+                                        <i className="bi bi-search display-1 mt-3"></i>
+                                        <h4 className="mt-3">Nie znaleziono promptów</h4>
+                                        <p className="mt-3">Spróbuj zmienić kryteria wyszukiwania lub filtry</p>
+                                        <button className="btn reset-search-btn mt-2" onClick={() => {
+                                            if (searchInputRef.current) {
+                                                searchInputRef.current.value = '';
+                                            }
+                                            applyFilters({
+                                                query: '',
+                                                author: '',
+                                                tag: '',
+                                                date: '',
+                                                category: 'All'
+                                            });
+                                        }}>
+                                            <i className="bi bi-arrow-counterclockwise"></i> Resetuj filtry
+                                        </button>
+                                    </div>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                 )}
@@ -989,6 +1810,29 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Modal do edycji promptu */}
+            {isEditPromptOpen && editingPrompt && (
+                <EditPrompt
+                    isOpen={isEditPromptOpen}
+                    onClose={() => {
+                        setIsEditPromptOpen(false);
+                        setIsPromptDetailOpen(true); // Powrót do podglądu po anulowaniu
+                    }}
+                    prompt={editingPrompt}
+                    onSave={handleSaveEditedPrompt}
+                />
+            )}
+
+            {/* Dodanie modalu zespołu do renderowania */}
+            {isTeamModalOpen && (
+                <TeamModal
+                    isOpen={isTeamModalOpen}
+                    onClose={handleCloseTeamModal}
+                    members={teamMembers}
+                    currentUserRole={currentUserRole}
+                    teamPrompts={teamPrompts}
+                />
             )}
         </div>
     );

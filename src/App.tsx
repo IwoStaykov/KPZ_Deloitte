@@ -74,8 +74,8 @@ const App: React.FC = () => {
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+    // Removed unused isLoading state
+    const [, setError] = useState<string | null>(null);
     const { signOut } = useAuthenticator();
 
 
@@ -139,7 +139,7 @@ const App: React.FC = () => {
  // Pobieranie promptów z bazy danych
  useEffect(() => {
     const fetchPrompts = async () => {
-        setIsLoading(true);
+        // Removed setIsLoading as isLoading state is no longer used
         setError(null);
         
         try {
@@ -195,9 +195,7 @@ const App: React.FC = () => {
         } catch (err) {
             console.error("Błąd podczas pobierania promptów:", err);
             setError("Nie udało się pobrać promptów. Spróbuj ponownie później.");
-        } finally {
-            setIsLoading(false);
-        }
+        } // Removed setIsLoading as isLoading state is no longer used
     };
 
     fetchPrompts();

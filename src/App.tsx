@@ -34,12 +34,11 @@ interface PromptDetailProps {
     date: string;
     usageCount: number;
     promptContent: string;
-    // Dodajemy historię wersji do promptu
-    history?: PromptHistoryItem[];
+    history?: PromptHistoryItem[]; // Historia wersji
     onEdit: () => void; // Funkcja do obsługi przycisku edycji
 }
 
-// Nowy interfejs dla elementu historii promptu
+// Interfejs dla elementu historii promptu
 interface PromptHistoryItem {
     version: number;
     date: string;
@@ -66,7 +65,7 @@ interface TeamModalProps {
     teamPrompts: Prompt[];
 }
 
-// Nowy interfejs dla okna edycji promptu
+// Interfejs dla okna edycji promptu
 interface EditPromptProps {
     isOpen: boolean;
     onClose: () => void;
@@ -87,6 +86,7 @@ interface Prompt {
     history?: PromptHistoryItem[];
 }
 
+// Interfejs dla komponentu Filtrowania
 interface FilterOptions {
     query?: string;
     author?: string;
@@ -102,7 +102,6 @@ const App: React.FC = () => {
 
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
-    // Usuwamy nieużywaną zmienną isSidebarCollapsed
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
@@ -116,9 +115,7 @@ const App: React.FC = () => {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [currentUserRole, setCurrentUserRole] = useState<'leader' | 'member'>('member');
     const [teamPrompts, setTeamPrompts] = useState<Prompt[]>([]);
-
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
-    // Stan dla filtrów wyszukiwania
     const [searchFilters, setSearchFilters] = useState<{
         query: string;
         author: string;
@@ -133,6 +130,30 @@ const App: React.FC = () => {
 
     // Stan dla widoczności panelu filtrów
     const [isFilterPanelVisible, setIsFilterPanelVisible] = useState<boolean>(false);
+
+    const filterPanelRef = useRef<HTMLDivElement>(null);
+
+// Dodanie efektu dla obsługi kliknięć poza panelem filtrów
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+
+            if (isFilterPanelVisible && filterPanelRef.current &&
+                !filterPanelRef.current.contains(target) &&
+                !(target as Element).closest?.('.filter-toggle-btn')) {
+                setIsFilterPanelVisible(false);
+            }
+        };
+
+        if (isFilterPanelVisible) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isFilterPanelVisible]);
 
     // Stan dla przechowywania wyfiltrowanych promptów
     const [filteredPrompts, setFilteredPrompts] = useState<Prompt[]>([])
@@ -157,7 +178,7 @@ const App: React.FC = () => {
         alert('Wylogowanie w trybie lokalnym - funkcja symulowana');
     };
 
-    // Przykładowe dane
+    // Przykładowe dane (ZINTEGORWAĆ Z BAZĄ DANYCH)
     const sidebarCategories: SidebarCategory[] = [
         {
             icon: 'bi-house-door',
@@ -463,7 +484,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         }
     }, []);
 
-    // Obsługa kliknięcia poza menu profilu - poprawiona wersja
+    // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
@@ -648,7 +669,6 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         setIsPromptDetailOpen(true);
     };
 
-    // Obsługa otwarcia modalu zespołu
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
         setIsTeamModalOpen(false);
@@ -827,6 +847,41 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         }
     };
 
+    useEffect(() => {
+        const handleClickOutsideModals = (event: MouseEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+
+            // Sprawdzamy, czy kliknięcie jest na overlay (tle) modalu, a nie na treści
+            if ((target as Element).classList?.contains('modal-overlay')) {
+                // Dla modala tworzenia promptu
+                if (isCreatePromptOpen) {
+                    closeCreatePrompt();
+                }
+
+                // Dla modala edycji promptu
+                if (isEditPromptOpen) {
+                    setIsEditPromptOpen(false);
+                    setIsPromptDetailOpen(true); // Powrót do podglądu
+                }
+
+                // Dla modala zespołu
+                if (isTeamModalOpen) {
+                    handleCloseTeamModal();
+                }
+            }
+        };
+
+        // Dodajemy nasłuchiwanie tylko gdy któryś modal jest otwarty
+        if (isCreatePromptOpen || isEditPromptOpen || isTeamModalOpen) {
+            document.addEventListener('mousedown', handleClickOutsideModals);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideModals);
+        };
+    }, [isCreatePromptOpen, isEditPromptOpen, isTeamModalOpen, closeCreatePrompt, handleCloseTeamModal]);
+
     const handleCategoryChange = (category: string) => {
         // Użyj uniwersalnej funkcji filtrowania
         applyFilters({ category });
@@ -902,6 +957,31 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
         // Stan dla kontroli widoczności historii
         const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+
+        const historyMenuRef = useRef<HTMLDivElement>(null);
+
+// Dodanie efektu dla obsługi kliknięć poza menu historii
+        useEffect(() => {
+            const handleClickOutside = (event: MouseEvent) => {
+                const target = event.target as Node | null;
+                if (!target) return;
+
+                if (isHistoryOpen && historyMenuRef.current &&
+                    !historyMenuRef.current.contains(target) &&
+                    !(target as Element).closest?.('.history-btn')) {
+                    setIsHistoryOpen(false);
+                }
+            };
+
+            if (isHistoryOpen) {
+                document.addEventListener('mousedown', handleClickOutside);
+            }
+
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }, [isHistoryOpen]);
+
         // Stan dla trybu porównania
         const [isCompareMode, setIsCompareMode] = useState<boolean>(false);
         // Stany dla przechowywania starej i nowej zawartości do porównania
@@ -1042,7 +1122,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                                 {selectedVersion ? `Version ${selectedVersion}` : "History"}
                             </button>
                             {isHistoryOpen && (
-                                <div className="history-menu">
+                                <div className="history-menu" ref={historyMenuRef}>
                                     <div
                                         className={`history-item ${selectedVersion === null ? 'active' : ''}`}
                                         onClick={() => setSelectedVersion(null)}
@@ -1095,7 +1175,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         if (!isVisible) return null;
 
         return (
-            <div className="filter-panel">
+            <div className="filter-panel" ref={filterPanelRef}>
                 <div className="filter-header">
                     <h4>Filtry wyszukiwania</h4>
                     <button className="btn reset-btn" onClick={onReset}>

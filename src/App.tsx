@@ -74,6 +74,8 @@ const App: React.FC = () => {
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
     const { signOut } = useAuthenticator();
 
 
@@ -134,48 +136,72 @@ const App: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchPrompts = async () => {
-          try {
+ // Pobieranie promptów z bazy danych
+ useEffect(() => {
+    const fetchPrompts = async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            // Zapytanie o listę promptów z odpowiednimi relacjami
             const { data: promptList } = await client.models.Prompt.list({
                 selectionSet: [
                     "id",
                     "title",
                     "description",
                     "tags",
+                    "authorId",
                     "creationDate",
                     "lastModifiedDate",
-                    "author.*",
-                    "latestVersion.*",
-                  ]
+                    "latestVersion.content",
+                    "latestVersion.versionNumber",
+                    "latestVersion.creationDate",
+                    "versions.content",
+                    "versions.versionNumber",
+                    "versions.creationDate"
+                ]
             });
     
-            const transformedPrompts: Prompt[] = promptList.map((p) => ({
-              id: Number(p.id),
-              title: p.title,
-              description: p.description ?? '',
-              tags: (p.tags ?? []).filter((tag): tag is string => tag !== null),
-              author: `${(p as any).author?.name ?? "Unknown"} ${(p as any).author?.surname ?? ""}`,
+            const transformedPrompts: Prompt[] = promptList.map((p: any) => {
+                const id = parseInt(p.id, 10); // Ensure id is a number
+                // Przygotowanie historii wersji z porządkowaniem od najnowszej do najstarszej
+                const versions = p.versions?.items || [];
+                const sortedVersions = [...versions].sort((a, b) => 
+                    parseInt(b.versionNumber) - parseInt(a.versionNumber)
+                );
+                
+                // Historia wersji
+                const history: PromptHistoryItem[] = sortedVersions.map(v => ({
+                    version: parseInt(v.versionNumber),
+                    date: new Date(v.creationDate).toLocaleDateString(),
+                    changes: `Version ${v.versionNumber}`,
+                    content: v.content
+                }));
 
-              date: new Date(p.lastModifiedDate).toLocaleDateString(),
-              usageCount: 0,
-              promptContent: p.latestVersion?.content ?? '',
-              history: (p as any).versions?.items?.map((v: any) => ({
-                version: Number(v.versionNumber),
-                date: new Date(v.creationDate).toLocaleDateString(),
-                changes: `Version ${v.versionNumber}`,
-                content: v.content
-              })) ?? []
-            }));
-    
+                return {
+                    id: id,
+                    title: p.title,
+                    description: p.description || '',
+                    tags: p.tags?.filter(Boolean) || [],
+                    author: p.authorId,
+                    date: new Date(p.lastModifiedDate).toLocaleDateString(),
+                    usageCount: 0, // W schemacie nie ma licznika użyć, więc dodajemy 0
+                    promptContent: p.latestVersion?.content || '',
+                    history: history.length > 0 ? history : undefined
+                };
+            });
+
             setFetchedPrompts(transformedPrompts);
-          } catch (err) {
+        } catch (err) {
             console.error("Błąd podczas pobierania promptów:", err);
-          }
-        };
-    
-        fetchPrompts();
-      }, []);
+            setError("Nie udało się pobrać promptów. Spróbuj ponownie później.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchPrompts();
+    }, []);
 
     // Obsługa zmiany motywu
     const toggleTheme = () => {

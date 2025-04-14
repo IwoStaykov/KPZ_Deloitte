@@ -1,12 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
-
 const schema = a.schema({
   Prompt: a
     .model({
@@ -14,11 +7,10 @@ const schema = a.schema({
       description: a.string(),
       content: a.string().required(),
       tags: a.string().array(),
-      authorId: a.id().required(), // Klucz obcy do user
+      authorId: a.id().required(), // sub z Cognito
       creationDate: a.datetime().required(),
       lastModifiedDate: a.datetime().required(),
       latestVersionId: a.id(),
-      author: a.belongsTo('User', 'authorId'),
       versions: a.hasMany("Version", "promptId"),
       latestVersion: a.belongsTo('Version', 'latestVersionId'),
       favoritedBy: a.hasMany('UserFavoritePrompt', 'promptId')
@@ -36,27 +28,14 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.publicApiKey()]),
 
-  
-  User: a
+    UserFavoritePrompt: a
     .model({
-      name: a.string().required(),
-      surname: a.string().required(),
-      email: a.email(),
-      authoredPrompts: a.hasMany('Prompt', 'authorId'),
-      favoritePrompts: a.hasMany('UserFavoritePrompt', 'userId')
-    })
-    .authorization((allow) => [allow.publicApiKey()]),
-
-
-  UserFavoritePrompt: a
-    .model({
-      userId: a.id().required(), // Klucz obcy do User
-      user: a.belongsTo('User', 'userId'),
-      promptId: a.id().required(), // Klucz obcy do Prompt
+      userId: a.id().required(), // sub z Cognito
+      promptId: a.id().required(),
       prompt: a.belongsTo('Prompt', 'promptId')
     })
-    .authorization((allow) => [allow.publicApiKey()])
-    .identifier(['userId', 'promptId']), // Klucz złożony zapobiega duplikatom
+    .authorization((allow) => [allow.authenticated()])
+    .identifier(['userId', 'promptId']),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -72,31 +51,3 @@ export const data = defineData({
   },
 });
 
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>

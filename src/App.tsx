@@ -143,6 +143,7 @@ const App: React.FC = () => {
             "id",
             "title",
             "description",
+            "content",
             "tags",
             "authorId",
             "creationDate",
@@ -178,7 +179,7 @@ const App: React.FC = () => {
                     author: p.authorId,
                     date: new Date(p.lastModifiedDate).toLocaleDateString(),
                     usageCount: 0,
-                    promptContent: p.latestVersion?.content || '',
+                    promptContent: p.content,
                     history: history.length > 0 ? history : undefined
                 };
             });

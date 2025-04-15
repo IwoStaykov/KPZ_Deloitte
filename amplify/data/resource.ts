@@ -34,7 +34,7 @@ const schema = a.schema({
       promptId: a.id().required(),
       prompt: a.belongsTo('Prompt', 'promptId')
     })
-    .authorization((allow) => [allow.authenticated()])
+    .authorization((allow) => [allow.publicApiKey()])
     .identifier(['userId', 'promptId']),
 });
 
@@ -43,7 +43,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "userPool", // Zalecany tryb dla aplikacji z logowaniem użytkowników
+    defaultAuthorizationMode: "apiKey", // Zalecany tryb dla aplikacji z logowaniem użytkowników
     // Opcjonalnie: Konfiguracja API Key jeśli jest potrzebny dostęp publiczny
     apiKeyAuthorizationMode: {
       expiresInDays: 30,

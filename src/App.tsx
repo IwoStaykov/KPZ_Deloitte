@@ -138,39 +138,31 @@ const App: React.FC = () => {
 
  // Pobieranie promptów z bazy danych
  useEffect(() => {
-    const fetchPrompts = async () => {
-        // Removed setIsLoading as isLoading state is no longer used
-        setError(null);
-        
-        try {
-            // Zapytanie o listę promptów z odpowiednimi relacjami
-            const { data: promptList } = await client.models.Prompt.list({
-                selectionSet: [
-                    "id",
-                    "title",
-                    "description",
-                    "tags",
-                    "authorId",
-                    "creationDate",
-                    "lastModifiedDate",
-                    "latestVersion.content",
-                    "latestVersion.versionNumber",
-                    "latestVersion.creationDate",
-                    "versions.content",
-                    "versions.versionNumber",
-                    "versions.creationDate"
-                ]
-            });
-    
-            const transformedPrompts: Prompt[] = promptList.map((p: any) => {
-                const id = parseInt(p.id, 10); // Ensure id is a number
-                // Przygotowanie historii wersji z porządkowaniem od najnowszej do najstarszej
+    const subscription = client.models.Prompt.observeQuery({
+        selectionSet: [
+            "id",
+            "title",
+            "description",
+            "tags",
+            "authorId",
+            "creationDate",
+            "lastModifiedDate",
+            "latestVersion.content",
+            "latestVersion.versionNumber",
+            "latestVersion.creationDate",
+            "versions.content",
+            "versions.versionNumber",
+            "versions.creationDate"
+        ]
+    }).subscribe({
+        next: ({ items }) => {
+            const transformedPrompts: Prompt[] = items.map((p: any) => {
+                const id = parseInt(p.id, 10);
                 const versions = p.versions?.items || [];
-                const sortedVersions = [...versions].sort((a, b) => 
+                const sortedVersions = [...versions].sort((a, b) =>
                     parseInt(b.versionNumber) - parseInt(a.versionNumber)
                 );
-                
-                // Historia wersji
+
                 const history: PromptHistoryItem[] = sortedVersions.map(v => ({
                     version: parseInt(v.versionNumber),
                     date: new Date(v.creationDate).toLocaleDateString(),
@@ -185,21 +177,23 @@ const App: React.FC = () => {
                     tags: p.tags?.filter(Boolean) || [],
                     author: p.authorId,
                     date: new Date(p.lastModifiedDate).toLocaleDateString(),
-                    usageCount: 0, // W schemacie nie ma licznika użyć, więc dodajemy 0
+                    usageCount: 0,
                     promptContent: p.latestVersion?.content || '',
                     history: history.length > 0 ? history : undefined
                 };
             });
 
             setFetchedPrompts(transformedPrompts);
-        } catch (err) {
-            console.error("Błąd podczas pobierania promptów:", err);
-            setError("Nie udało się pobrać promptów. Spróbuj ponownie później.");
-        } // Removed setIsLoading as isLoading state is no longer used
-    };
+        },
+        error: (err) => {
+            console.error("Błąd observeQuery:", err);
+            setError("Nie udało się połączyć z bazą danych.");
+        }
+    });
 
-    fetchPrompts();
-    }, []);
+    return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
+}, []);
+
 
     // Obsługa zmiany motywu
     const toggleTheme = () => {

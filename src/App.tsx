@@ -1,6 +1,12 @@
 import React, {useState, useEffect, useRef} from 'react';
 import DiffEditor, {DiffMethod} from 'react-diff-viewer-continued'; // nowa biblioteka do porównywania tekstu.
 import './App.css';
+import { generateClient } from 'aws-amplify/data';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import type { Schema } from '../amplify/data/resource';
+
+const client = generateClient<Schema>();
+
 
 // Definicje typów
 interface SubmenuItem {
@@ -98,15 +104,13 @@ interface FilterOptions {
 
 const App: React.FC = () => {
 
-
-
     // Stany
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
+const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
     const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
     const [isEditPromptOpen, setIsEditPromptOpen] = useState<boolean>(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -116,6 +120,9 @@ const App: React.FC = () => {
     const [currentUserRole, setCurrentUserRole] = useState<'leader' | 'member'>('member');
     const [teamPrompts, setTeamPrompts] = useState<Prompt[]>([]);
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+    const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
+    const [, setError] = useState<string | null>(null);
+    const { signOut } = useAuthenticator();
     const [searchFilters, setSearchFilters] = useState<{
         query: string;
         author: string;
@@ -130,37 +137,12 @@ const App: React.FC = () => {
 
     // Stan dla widoczności panelu filtrów
     const [isFilterPanelVisible, setIsFilterPanelVisible] = useState<boolean>(false);
-
     const filterPanelRef = useRef<HTMLDivElement>(null);
 
-// Dodanie efektu dla obsługi kliknięć poza panelem filtrów
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node | null;
-            if (!target) return;
-
-            if (isFilterPanelVisible && filterPanelRef.current &&
-                !filterPanelRef.current.contains(target) &&
-                !(target as Element).closest?.('.filter-toggle-btn')) {
-                setIsFilterPanelVisible(false);
-            }
-        };
-
-        if (isFilterPanelVisible) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isFilterPanelVisible]);
-
     // Stan dla przechowywania wyfiltrowanych promptów
-    const [filteredPrompts, setFilteredPrompts] = useState<Prompt[]>([])
-
+    const [filteredPrompts, setFilteredPrompts] = useState<Prompt[]>([]);
 
     const [newPrompt, setNewPrompt] = useState<{
-
         title: string;
         description: string;
         tags: string;
@@ -171,14 +153,6 @@ const App: React.FC = () => {
         tags: '',
         content: ''
     });
-
-    // Bezpieczna obsługa signOut bez warunkowego wywołania hooka
-    const signOutFunction = () => {
-        console.log('Wylogowanie (tryb lokalny)');
-        alert('Wylogowanie w trybie lokalnym - funkcja symulowana');
-    };
-
-    // Przykładowe dane (ZINTEGORWAĆ Z BAZĄ DANYCH)
     const sidebarCategories: SidebarCategory[] = [
         {
             icon: 'bi-house-door',
@@ -232,219 +206,6 @@ const App: React.FC = () => {
         }
     ];
 
-    // Referencja do danych promptów, używana w komponencie
-    const prompts: Prompt[] = [
-        {
-            id: 1,
-            title: 'SEO Blog Post Generator',
-            description: 'Create SEO-optimized blog posts with proper headings, keywords, and meta descriptions.',
-            tags: ['SEO', 'Content', 'Blog'],
-            author: 'John Doe',
-            date: '2 days ago',
-            usageCount: 3457,
-            promptContent: `I want you to act as a professional content writer and SEO expert. Create a comprehensive blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. An attention-grabbing headline with the target keyword "[KEYWORD]"
-2. A compelling introduction that engages the reader and sets up the topic
-3. At least 5 sections with H2 headings that cover different aspects of the topic
-4. 1-2 H3 subheadings under each H2 section for better organization
-5. Naturally incorporated related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2], [RELATED KEYWORD 3]
-6. A minimum of 1,500 words of valuable, informative content
-7. Practical examples, case studies, or statistics to support main points
-8. A conclusion that summarizes key takeaways and includes a call-to-action
-9. 3 FAQs about the topic with detailed answers
-10. Meta description of 150-160 characters that includes the main keyword and entices clicks
-
-Format the content in Markdown. Make the content engaging, authoritative, and valuable to readers while ensuring it follows SEO best practices.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '10 days ago',
-                    changes: 'Initial version',
-                    content: `I want you to act as a content writer and SEO expert. Create a blog post about [TOPIC] optimized for SEO.
-
-Your blog post should include:
-1. A headline with the keyword "[KEYWORD]"
-2. An introduction 
-3. 3-4 sections with headings
-4. Related keywords
-5. A conclusion with call-to-action
-6. 2 FAQs
-
-Format in Markdown.`
-                },
-                {
-                    version: 2,
-                    date: '7 days ago',
-                    changes: 'Added more structure and details',
-                    content: `I want you to act as a professional content writer and SEO expert. Create a blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. A headline with the target keyword "[KEYWORD]"
-2. An introduction that engages the reader
-3. At least 4 sections with H2 headings
-4. Related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2]
-5. About 1,000 words of content
-6. Examples or statistics 
-7. A conclusion with a call-to-action
-8. 2 FAQs about the topic
-9. Meta description
-
-Format in Markdown.`
-                },
-                {
-                    version: 3,
-                    date: '2 days ago',
-                    changes: 'Expanded requirements and added more details',
-                    content: `I want you to act as a professional content writer and SEO expert. Create a comprehensive blog post about [TOPIC] that is optimized for SEO.
-
-Your blog post should include:
-1. An attention-grabbing headline with the target keyword "[KEYWORD]"
-2. A compelling introduction that engages the reader and sets up the topic
-3. At least 5 sections with H2 headings that cover different aspects of the topic
-4. 1-2 H3 subheadings under each H2 section for better organization
-5. Naturally incorporated related keywords: [RELATED KEYWORD 1], [RELATED KEYWORD 2], [RELATED KEYWORD 3]
-6. A minimum of 1,500 words of valuable, informative content
-7. Practical examples, case studies, or statistics to support main points
-8. A conclusion that summarizes key takeaways and includes a call-to-action
-9. 3 FAQs about the topic with detailed answers
-10. Meta description of 150-160 characters that includes the main keyword and entices clicks
-
-Format the content in Markdown. Make the content engaging, authoritative, and valuable to readers while ensuring it follows SEO best practices.`
-                }
-            ]
-        },
-        {
-            id: 2,
-            title: 'Code Refactoring Assistant',
-            description: 'Helps refactor code for better readability, efficiency, and adherence to best practices.',
-            tags: ['Coding', 'DevTools', 'Refactoring'],
-            author: 'Jane Smith',
-            date: '5 days ago',
-            usageCount: 2145,
-            promptContent: `As a code refactoring expert, please help me improve the following code for [LANGUAGE]. 
-
-My code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Please refactor this code to:
-1. Improve readability
-2. Enhance performance where possible
-3. Follow [LANGUAGE] best practices and design patterns
-4. Reduce redundancy and improve code organization
-5. Add appropriate error handling
-6. Include helpful comments explaining complex parts
-
-For each change you make, please explain your reasoning and the benefits of the improvement.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '12 days ago',
-                    changes: 'Initial version',
-                    content: `As a code reviewer, please help me improve this code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Make it more readable and fix any issues.`
-                },
-                {
-                    version: 2,
-                    date: '5 days ago',
-                    changes: 'More detailed requirements and structure',
-                    content: `As a code refactoring expert, please help me improve the following code for [LANGUAGE]. 
-
-My code:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\`
-
-Please refactor this code to:
-1. Improve readability
-2. Enhance performance where possible
-3. Follow [LANGUAGE] best practices and design patterns
-4. Reduce redundancy and improve code organization
-5. Add appropriate error handling
-6. Include helpful comments explaining complex parts
-
-For each change you make, please explain your reasoning and the benefits of the improvement.`
-                }
-            ]
-        },
-        {
-            id: 3,
-            title: 'UI/UX Feedback Expert',
-            description: 'Provides detailed feedback on UI/UX designs with actionable improvement suggestions.',
-            tags: ['Design', 'UI/UX', 'Feedback'],
-            author: 'Alex Johnson',
-            date: '1 week ago',
-            usageCount: 1873,
-            promptContent: `Act as a senior UI/UX design consultant with 15+ years of experience. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like you to provide detailed, professional feedback.
-
-For your analysis, please include:
-
-1. First impressions (visual hierarchy, clarity of purpose, branding)
-2. User flow analysis (evaluate how intuitive the navigation and interactions are)
-3. Specific UI element feedback (color scheme, typography, spacing, element sizing)
-4. Accessibility considerations (contrast, text size, keyboard navigation, screen reader compatibility)
-5. Mobile responsiveness (if applicable)
-6. 3-5 highest priority recommendations for improvement
-7. 2-3 strengths of the current design that should be preserved
-
-For each critique point, please suggest a specific, actionable improvement. Balance your feedback with both positive elements and areas for improvement.`,
-            // Dodajemy historię wersji
-            history: [
-                {
-                    version: 1,
-                    date: '3 weeks ago',
-                    changes: 'Initial version',
-                    content: `Act as a UI/UX designer. Review my design for [PRODUCT] and give me feedback on:
-                    
-1. Visual design
-2. Usability
-3. Suggestions for improvement`
-                },
-                {
-                    version: 2,
-                    date: '2 weeks ago',
-                    changes: 'Added more specific feedback points',
-                    content: `Act as a UI/UX design consultant. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like your feedback.
-
-Please review:
-1. Visual hierarchy
-2. User flow
-3. Color scheme and typography
-4. Accessibility
-5. Recommendations for improvement`
-                },
-                {
-                    version: 3,
-                    date: '1 week ago',
-                    changes: 'Comprehensive rewrite with detailed structure',
-                    content: `Act as a senior UI/UX design consultant with 15+ years of experience. I'm going to show you a design for [PRODUCT/WEBSITE/APP] and I'd like you to provide detailed, professional feedback.
-
-For your analysis, please include:
-
-1. First impressions (visual hierarchy, clarity of purpose, branding)
-2. User flow analysis (evaluate how intuitive the navigation and interactions are)
-3. Specific UI element feedback (color scheme, typography, spacing, element sizing)
-4. Accessibility considerations (contrast, text size, keyboard navigation, screen reader compatibility)
-5. Mobile responsiveness (if applicable)
-6. 3-5 highest priority recommendations for improvement
-7. 2-3 strengths of the current design that should be preserved
-
-For each critique point, please suggest a specific, actionable improvement. Balance your feedback with both positive elements and areas for improvement.`
-
-
-                }
-            ]
-        }
-    ];
 
     // Przykładowe dane członków zespołu
     const initialTeamMembers: TeamMember[] = [
@@ -483,8 +244,8 @@ For each critique point, please suggest a specific, actionable improvement. Bala
             document.body.setAttribute('data-theme', 'dark');
         }
     }, []);
-
-    // Obsługa kliknięcia poza menu profilu
+  
+  // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node | null;
@@ -512,11 +273,72 @@ For each critique point, please suggest a specific, actionable improvement. Bala
 
         // Ustawiamy rolę bieżącego użytkownika (w produkcji pobierane z API)
         setCurrentUserRole('leader');
+    }, []);
 
-        // Inicjalizujemy prompty zespołu - dla przykładu używamy pierwszych dwóch standardowych promptów
-        setTeamPrompts(prompts.slice(0, 2));
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-    // tak wiem w tamtej lini jest błąd. narazie tak zostawiamy.
+    // Pobieranie promptów z bazy danych
+    useEffect(() => {
+        const subscription = client.models.Prompt.observeQuery({
+            selectionSet: [
+                "id",
+                "title",
+                "description",
+                "content",
+                "tags",
+                "authorId",
+                "creationDate",
+                "lastModifiedDate",
+                "latestVersion.content",
+                "latestVersion.versionNumber",
+                "latestVersion.creationDate",
+                "versions.content",
+                "versions.versionNumber",
+                "versions.creationDate"
+            ]
+        }).subscribe({
+            next: ({ items }) => {
+                const transformedPrompts: Prompt[] = items.map((p: any) => {
+                    const id = parseInt(p.id, 10);
+                    const versions = p.versions?.items || [];
+                    const sortedVersions = [...versions].sort((a, b) =>
+                        parseInt(b.versionNumber) - parseInt(a.versionNumber)
+                    );
+
+                    const history: PromptHistoryItem[] = sortedVersions.map(v => ({
+                        version: parseInt(v.versionNumber),
+                        date: new Date(v.creationDate).toLocaleDateString(),
+                        changes: `Version ${v.versionNumber}`,
+                        content: v.content
+                    }));
+
+                    return {
+                        id: id,
+                        title: p.title,
+                        description: p.description || '',
+                        tags: p.tags?.filter(Boolean) || [],
+                        author: p.authorId,
+                        date: new Date(p.lastModifiedDate).toLocaleDateString(),
+                        usageCount: 0,
+                        promptContent: p.content,
+                        history: history.length > 0 ? history : undefined
+                    };
+                });
+
+                setFetchedPrompts(transformedPrompts);
+                setFilteredPrompts(transformedPrompts);
+                
+                // Jeśli mamy jakieś prompty, możemy też ustawić teamPrompts
+                if (transformedPrompts.length > 0) {
+                    setTeamPrompts(transformedPrompts.slice(0, 2));
+                }
+            },
+            error: (err) => {
+                console.error("Błąd observeQuery:", err);
+                setError("Nie udało się połączyć z bazą danych.");
+            }
+        });
+
+        return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
+    }, []);
 
     // Obsługa zmiany motywu
     const toggleTheme = () => {
@@ -606,8 +428,8 @@ For each critique point, please suggest a specific, actionable improvement. Bala
 
     // Wyodrębniona funkcja wylogowywania
     const handleSignOut = () => {
-        signOutFunction();
-        setIsProfileMenuOpen(false); // Zamykamy menu po wylogowaniu
+       signOut();
+       setIsProfileMenuOpen(false); // Zamykamy menu po wylogowaniu
     };
 
     // Obsługa otwierania formularza nowego promptu
@@ -636,13 +458,40 @@ For each critique point, please suggest a specific, actionable improvement. Bala
     };
 
     // Obsługa zapisania nowego promptu
-    const handleSavePrompt = () => {
-        // Tutaj dodalibyśmy logikę zapisywania promptu do bazy danych
-        // W trybie lokalnym możemy wyświetlić alert
-        console.log('Zapisany prompt:', newPrompt);
-        alert('Prompt został zapisany! (symulacja w trybie lokalnym)');
+    const handleSavePrompt = async () => {
+    try {
+        // Konwersja tagów z string na tablicę
+        const tagsArray = newPrompt.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+        
+        // Aktualna data dla pól creationDate i lastModifiedDate
+        const currentDate = new Date().toISOString();
+        
+        // Pobierz ID aktualnie zalogowanego użytkownika
+const currentUser = await getCurrentUser(); // Implementacja tej funkcji zależy od Twojego systemu uwierzytelniania
+const authorId = currentUser?.userId || 'anonymous';
+
+// Utworzenie promptu w bazie danych
+const result = await client.models.Prompt.create({
+    title: newPrompt.title,
+    description: newPrompt.description,
+    tags: tagsArray,
+    content: newPrompt.content,
+    authorId: authorId,
+    creationDate: currentDate,
+    lastModifiedDate: currentDate
+});
+        
+        
+        console.log('Prompt zapisany pomyślnie:', result);
+        alert('Prompt został zapisany do bazy danych!');
+        
+        // Odświeżenie listy promptów
         closeCreatePrompt();
-    };
+    } catch (error) {
+        console.error('Błąd podczas zapisywania promptu:', error);
+        alert('Wystąpił błąd podczas zapisywania promptu.');
+    }
+};
 
     // Obsługa otwarcia okna edycji promptu
     const handleEditPrompt = () => {
@@ -654,23 +503,66 @@ For each critique point, please suggest a specific, actionable improvement. Bala
     };
 
 // Obsługa zapisania zmian w promptcie
-    const handleSaveEditedPrompt = (updatedPrompt: Prompt) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API do aktualizacji promptu
-        console.log('Aktualizacja promptu:', updatedPrompt);
-        alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
-
-        // Aktualizujemy prompt lokalnie (mockup)
-        prompts.map(p =>
-            p.id === updatedPrompt.id ? updatedPrompt : p
+    const handleSaveEditedPrompt = async (updatedPrompt: Prompt) => {
+    try {
+        // Aktualizacja promptu w bazie danych
+        await client.models.Prompt.update({
+            id: updatedPrompt.id.toString(),
+            title: updatedPrompt.title,
+            description: updatedPrompt.description,
+            tags: updatedPrompt.tags,
+            content: updatedPrompt.promptContent,
+            lastModifiedDate: new Date().toISOString()
+        });
+        
+        console.log('Prompt zaktualizowany pomyślnie:', updatedPrompt);
+        alert('Prompt został zaktualizowany w bazie danych!');
+        
+        // Aktualizacja lokalnego stanu
+        setFetchedPrompts(
+            fetchedPrompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
         );
-
+        setFilteredPrompts(
+            filteredPrompts.map(p => p.id === updatedPrompt.id ? updatedPrompt : p)
+        );
+        
         // Aktualizujemy wybrany prompt
         setSelectedPrompt(updatedPrompt);
-
+        
         // Zamykamy okno edycji i otwieramy ponownie podgląd
         setIsEditPromptOpen(false);
         setIsPromptDetailOpen(true);
-    };
+    } catch (error) {
+        console.error('Błąd podczas aktualizacji promptu:', error);
+        alert('Wystąpił błąd podczas aktualizacji promptu.');
+    }
+};
+  
+  // Obsługa usunięcia promptu
+const handleDeletePrompt = async (promptId: number) => {
+    try {
+        // Usunięcie promptu z bazy danych
+        await client.models.Prompt.delete({
+            id: promptId.toString()
+        });
+        
+        console.log('Prompt usunięty pomyślnie');
+        alert('Prompt został usunięty z bazy danych!');
+        
+        // Aktualizacja lokalnego stanu
+        setFetchedPrompts(prevPrompts => prevPrompts.filter(p => p.id !== promptId));
+        setFilteredPrompts(prevPrompts => prevPrompts.filter(p => p.id !== promptId));
+        
+        // Jeśli usuwamy aktualnie wybrany prompt, zamknij panel szczegółów
+        if (selectedPrompt && selectedPrompt.id === promptId) {
+            setSelectedPrompt(null);
+            setIsPromptDetailOpen(false);
+        }
+    } catch (error) {
+        console.error('Błąd podczas usuwania promptu:', error);
+        alert('Wystąpił błąd podczas usuwania promptu.');
+    }
+};
 
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
@@ -784,7 +676,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
         const filterCategory = options.category !== undefined ? options.category : selectedCategory;
 
         // Rozpoczynamy od wszystkich promptów
-        let filtered = [...prompts];
+        let filtered = [...fetchedPrompts];
 
         // Filtrowanie po kategorii/tagu głównym
         if (filterCategory !== 'All') {
@@ -1151,13 +1043,16 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                     )}
                     <div className="action-buttons">
                         <button className="btn copy-btn" onClick={copyPromptToClipboard}>
-                            <i className="bi bi-clipboard"></i> Copy
-                        </button>
+    <i className="bi bi-clipboard"></i> Kopiuj
+</button>
                         <button className="btn edit-btn" onClick={onEdit}>
                             <i className="bi bi-pencil"></i> Edit
                         </button>
                         <button className="btn use-btn">
                             Use This Prompt
+                        </button>
+                      <button className="btn delete-btn" onClick={() => handleDeletePrompt(selectedPrompt.id)}>
+                             <i className="bi bi-trash"></i> Usuń
                         </button>
                     </div>
                 </div>
@@ -1705,7 +1600,7 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                             <div className="d-flex align-items-center">
                                 <h3>Prompts</h3>
                                 <span className="prompt-count ms-3">
-      {filteredPrompts.length} z {prompts.length} wyników
+      {filteredPrompts.length} z {fetchedPrompts.length} wyników
     </span>
 
                                 {/* Wskaźniki aktywnych filtrów */}
@@ -1780,40 +1675,44 @@ For each critique point, please suggest a specific, actionable improvement. Bala
                         </div>
 
                         <div className="row g-4">
-                            {filteredPrompts.length > 0 ? (
-                                filteredPrompts.map((prompt) => (
-                                    <div className="col-lg-4 col-md-6" key={prompt.id}>
-                                        <PromptCard
-                                            title={prompt.title}
-                                            description={prompt.description}
-                                            tags={prompt.tags}
-                                            author={prompt.author}
-                                            date={prompt.date}
-                                            onClick={() => handlePromptClick(prompt)}
-                                        />
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-12 text-center py-5">
-                                    <div className="no-results">
-                                        <i className="bi bi-search display-1 mt-3"></i>
-                                        <h4 className="mt-3">Nie znaleziono promptów</h4>
-                                        <p className="mt-3">Spróbuj zmienić kryteria wyszukiwania lub filtry</p>
-                                        <button className="btn reset-search-btn mt-2" onClick={() => {
-                                            if (searchInputRef.current) {
-                                                searchInputRef.current.value = '';
-                                            }
-                                            applyFilters({
-                                                query: '',
-                                                author: '',
-                                                tag: '',
-                                                date: '',
-                                                category: 'All'
-                                            });
-                                        }}>
-                                            <i className="bi bi-arrow-counterclockwise"></i> Resetuj filtry
-                                        </button>
-                                    </div>
+                           {filteredPrompts.length > 0 ? (
+        filteredPrompts.map((prompt) => (
+            <div className="col-lg-4 col-md-6" key={prompt.id}>
+                <PromptCard
+                    title={prompt.title}
+                    description={prompt.description}
+                    tags={prompt.tags}
+                    author={prompt.author}
+                    date={prompt.date}
+                    onClick={() => handlePromptClick(prompt)}
+                />
+            </div>
+        ))
+    ) : (
+        <div className="col-12 text-center py-5">
+            <div className="no-results">
+                <i className="bi bi-search display-1 mt-3"></i>
+                <h4 className="mt-3">Nie znaleziono promptów</h4>
+                <p className="mt-3">Spróbuj zmienić kryteria wyszukiwania lub filtry</p>
+                <button className="btn reset-search-btn mt-2" onClick={() => {
+                    if (searchInputRef.current) {
+                        searchInputRef.current.value = '';
+                    }
+                    applyFilters({
+                        query: '',
+                        author: '',
+                        tag: '',
+                        date: '',
+                        category: 'All'
+                    });
+                }}>
+                    <i className="bi bi-arrow-counterclockwise"></i> Resetuj filtry
+                </button>
+            </div>
+        </div>
+    )}
+</div>
+
                                 </div>
                             )}
                         </div>

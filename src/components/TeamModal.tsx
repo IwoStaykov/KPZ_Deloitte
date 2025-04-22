@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { TeamModalProps } from '../types/interfaces';
 
-const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, members, currentUserRole, teamPrompts }) => {
+const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, members, teamPrompts }) => {
     const [activeTab, setActiveTab] = useState<'members' | 'prompts'>('members');
-    const [inviteEmail, setInviteEmail] = useState('');
 
     if (!isOpen) return null;
 

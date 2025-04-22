@@ -1,5 +1,4 @@
 import React, {useState, useEffect, useRef} from 'react';
-import DiffEditor, {DiffMethod} from 'react-diff-viewer-continued'; // nowa biblioteka do porównywania tekstu.
 import './App.css';
 import { prompts, initialTeamMembers } from './data/mockPrompts';
 import { filterPrompts } from './utils/filterUtils';
@@ -22,15 +21,9 @@ import TeamModal from './components/TeamModal';
 // Typy
 import {
   Prompt,
-  PromptHistoryItem,
-  PromptCardProps,
-  PromptDetailProps,
-  TeamModalProps,
-  EditPromptProps,
   FilterOptions,
   TeamMember,
   SidebarCategory,
-  SubmenuItem
 } from './types/interfaces';
 
 const App: React.FC = () => {
@@ -71,7 +64,7 @@ const App: React.FC = () => {
     const filterPanelRef = useRef<HTMLDivElement>(null);
 
     const { signOut } = useAuthenticator();
-    const { sub: userSub, loading, error} = useUserSub();
+    const { sub: userSub} = useUserSub();
 
 // Dodanie efektu dla obsługi kliknięć poza panelem filtrów
     useEffect(() => {
@@ -282,19 +275,6 @@ const App: React.FC = () => {
         setIsPromptDetailOpen(true);
     };
 
-    // Kopiowanie promptu do schowka
-    const copyPromptToClipboard = () => {
-        if (selectedPrompt) {
-            navigator.clipboard.writeText(selectedPrompt.promptContent)
-                .then(() => {
-                    alert('Prompt copied to clipboard!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy: ', err);
-                });
-        }
-    };
-
     // Obsługa menu profilu - poprawiona wersja
     const toggleProfileMenu = (e: React.MouseEvent) => {
         e.stopPropagation(); // Zatrzymujemy propagację wydarzenia
@@ -382,59 +362,6 @@ const App: React.FC = () => {
     const handleCloseTeamModal = () => {
         setIsTeamModalOpen(false);
     };
-
-// Obsługa usunięcia członka zespołu
-    const handleRemoveTeamMember = (memberId: number) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API
-        setTeamMembers(prevMembers =>
-            prevMembers.filter(member => member.id !== memberId)
-        );
-        alert('Członek zespołu został usunięty! (symulacja w trybie lokalnym)');
-    };
-
-// Obsługa zmiany roli członka zespołu
-    const handleChangeRole = (memberId: number, newRole: 'leader' | 'member') => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API
-        setTeamMembers(prevMembers =>
-            prevMembers.map(member =>
-                member.id === memberId ? {...member, role: newRole} : member
-            )
-        );
-
-        // Jeśli zmieniamy kogoś na lidera, to obecny lider staje się członkiem
-        if (newRole === 'leader') {
-            setTeamMembers(prevMembers =>
-                prevMembers.map(member =>
-                    member.role === 'leader' && member.id !== memberId ?
-                        {...member, role: 'member'} : member
-                )
-            );
-
-            // Jeśli to my jesteśmy liderem i przekazujemy uprawnienia, zmieniamy swój status
-            if (currentUserRole === 'leader') {
-                setCurrentUserRole('member');
-            }
-        }
-
-        alert(`Rola została zmieniona na ${newRole}! (symulacja w trybie lokalnym)`);
-    };
-
-// Obsługa dodania nowego członka zespołu
-    const handleAddTeamMember = (email: string) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API
-        const newMember: TeamMember = {
-            id: Date.now(), // Tymczasowe ID
-            name: `New Member (${email})`,
-            email,
-            role: 'member',
-            avatar: 'https://via.placeholder.com/40',
-            joinDate: 'Just now'
-        };
-
-        setTeamMembers(prevMembers => [...prevMembers, newMember]);
-        alert('Zaproszenie zostało wysłane! (symulacja w trybie lokalnym)');
-    };
-
 
 // Zbierz wartości z pól formularza i zastosuj filtry
     const collectAndApplyFilters = () => {

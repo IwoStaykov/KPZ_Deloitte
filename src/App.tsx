@@ -24,6 +24,7 @@ import {
   FilterOptions,
   TeamMember,
   SidebarCategory,
+  PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {

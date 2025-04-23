@@ -38,6 +38,8 @@ const App: React.FC = () => {
 
 
     // Stany
+    const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
+    const [, setError] = useState<string | null>(null);
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
@@ -169,6 +171,66 @@ const App: React.FC = () => {
             path: '/help'
         }
     ];
+
+        // Pobieranie promptów z bazy danych
+    useEffect(() => {
+        const subscription = client.models.Prompt.observeQuery({
+            selectionSet: [
+                "id",
+                "title",
+                "description",
+                "content",
+                "tags",
+                "authorId",
+                "creationDate",
+                "lastModifiedDate",
+                "latestVersion.content",
+                "latestVersion.versionNumber",
+                "latestVersion.creationDate",
+                "versions.content",
+                "versions.versionNumber",
+                "versions.creationDate"
+            ]
+        }).subscribe({
+            next: ({ items }) => {
+                const transformedPrompts: Prompt[] = items.map((p: any) => {
+                    const id = parseInt(p.id, 10);
+                    const versions = p.versions?.items || [];
+                    const sortedVersions = [...versions].sort((a, b) =>
+                        parseInt(b.versionNumber) - parseInt(a.versionNumber)
+                    );
+
+                    const history: PromptHistoryItem[] = sortedVersions.map(v => ({
+                        version: parseInt(v.versionNumber),
+                        date: new Date(v.creationDate).toLocaleDateString(),
+                        changes: `Version ${v.versionNumber}`,
+                        content: v.content
+                    }));
+
+                    return {
+                        id: id,
+                        title: p.title,
+                        description: p.description || '',
+                        tags: p.tags?.filter(Boolean) || [],
+                        author: p.authorId,
+                        date: new Date(p.lastModifiedDate).toLocaleDateString(),
+                        usageCount: 0,
+                        promptContent: p.content,
+                        history: history.length > 0 ? history : undefined
+                    };
+                });
+
+                setFetchedPrompts(transformedPrompts);
+            },
+            error: (err) => {
+                console.error("Błąd observeQuery:", err);
+                setError("Nie udało się połączyć z bazą danych.");
+            }
+        });
+
+        return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
+    }, []);
+
 
     
     // Efekty
@@ -806,8 +868,8 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="row g-4">
-                            {filteredPrompts.length > 0 ? (
-                                filteredPrompts.map((prompt) => (
+                            {fetchedPrompts.length > 0 ? (
+                                fetchedPrompts.map((prompt) => (
                                     <div className="col-lg-4 col-md-6" key={prompt.id}>
                                         <PromptCard
                                             title={prompt.title}

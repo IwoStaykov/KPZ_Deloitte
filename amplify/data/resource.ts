@@ -15,7 +15,10 @@ const schema = a.schema({
       latestVersion: a.belongsTo('Version', 'latestVersionId'),
       favoritedBy: a.hasMany('UserFavoritePrompt', 'promptId')
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [
+      allow.owner(), // Dla właściciela zasobu
+      allow.authenticated().to(['read']) // Dla zalogowanych użytkowników
+    ]),
 
   Version: a
     .model({
@@ -26,7 +29,10 @@ const schema = a.schema({
       prompt: a.belongsTo("Prompt", 'promptId'), // Relacja do nadrzędnego promptu
       latestForPrompt: a.hasOne("Prompt", "latestVersionId"),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [
+      allow.owner(), // Dla właściciela zasobu
+      allow.authenticated().to(['read']) // Dla zalogowanych użytkowników
+    ]),
 
     UserFavoritePrompt: a
     .model({
@@ -34,7 +40,10 @@ const schema = a.schema({
       promptId: a.id().required(),
       prompt: a.belongsTo('Prompt', 'promptId')
     })
-    .authorization((allow) => [allow.publicApiKey()])
+    .authorization((allow) => [
+      allow.owner(), // Dla właściciela zasobu
+      allow.authenticated().to(['read']) // Dla zalogowanych użytkowników
+    ])
     .identifier(['userId', 'promptId']),
 });
 

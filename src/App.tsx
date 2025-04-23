@@ -215,6 +215,7 @@ const App: React.FC = () => {
                 });
 
                 setFetchedPrompts(transformedPrompts);
+                setFilteredPrompts(transformedPrompts); // Ustawiamy również przefiltrowane prompty
             },
             error: (err) => {
                 console.error("Błąd observeQuery:", err);
@@ -389,6 +390,7 @@ const App: React.FC = () => {
             lastModifiedDate: new Date().toISOString()
         });
         alert('Prompt został zapisany!');
+        console.log(userSub);
         
         closeCreatePrompt();
     };
@@ -409,7 +411,7 @@ const App: React.FC = () => {
         alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
 
         // Aktualizujemy prompt lokalnie (mockup)
-        fetchedPrompts.map(p =>
+        filteredPrompts.map(p =>
             p.id === updatedPrompt.id ? updatedPrompt : p
         );
 
@@ -485,7 +487,7 @@ const App: React.FC = () => {
           date: filterDate
         };
       
-        const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
+        const results = filterPrompts(filteredPrompts, updatedFilters, filterCategory);
         setFilteredPrompts(results);
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
@@ -796,8 +798,8 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="row g-4">
-                            {fetchedPrompts.length > 0 ? (
-                                fetchedPrompts.map((prompt) => (
+                            {filteredPrompts.length > 0 ? (
+                                filteredPrompts.map((prompt) => (
                                     <div className="col-lg-4 col-md-6" key={prompt.id}>
                                         <PromptCard
                                             title={prompt.title}

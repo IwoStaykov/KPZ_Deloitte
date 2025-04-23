@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import './App.css';
-import { prompts, initialTeamMembers } from './data/mockPrompts';
+import { initialTeamMembers } from './data/mockPrompts';
 import { filterPrompts } from './utils/filterUtils';
 import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
@@ -267,7 +267,7 @@ const App: React.FC = () => {
         setCurrentUserRole('leader');
 
         // Inicjalizujemy prompty zespołu - dla przykładu używamy pierwszych dwóch standardowych promptów
-        setTeamPrompts(prompts.slice(0, 2));
+        setTeamPrompts(fetchedPrompts.slice(0, 2));
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     // tak wiem w tamtej lini jest błąd. narazie tak zostawiamy.
 
@@ -409,7 +409,7 @@ const App: React.FC = () => {
         alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
 
         // Aktualizujemy prompt lokalnie (mockup)
-        prompts.map(p =>
+        fetchedPrompts.map(p =>
             p.id === updatedPrompt.id ? updatedPrompt : p
         );
 
@@ -485,7 +485,7 @@ const App: React.FC = () => {
           date: filterDate
         };
       
-        const results = filterPrompts(prompts, updatedFilters, filterCategory);
+        const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
         setFilteredPrompts(results);
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
@@ -721,7 +721,7 @@ const App: React.FC = () => {
                             <div className="d-flex align-items-center">
                                 <h3>Prompts</h3>
                                 <span className="prompt-count ms-3">
-      {filteredPrompts.length} z {prompts.length} wyników
+      {filteredPrompts.length} z {fetchedPrompts.length} wyników
     </span>
 
                                 {/* Wskaźniki aktywnych filtrów */}

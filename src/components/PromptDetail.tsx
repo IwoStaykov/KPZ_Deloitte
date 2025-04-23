@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { PromptDetailProps, PromptHistoryItem } from '../types/interfaces';
+import { PromptDetailProps} from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
     isOpen, onClose, title, tags, description, author, date, usageCount,
-    promptContent, history, onEdit
+    promptContent, history = [], onEdit
 }) => {
     const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);

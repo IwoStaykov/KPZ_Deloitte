@@ -5,12 +5,12 @@ import { filterPrompts } from './utils/filterUtils';
 import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
-import type { Prompt as PromptType } from './types/interfaces';
+//import type { Prompt as PromptType } from './types/interfaces';
 import { useUserSub } from './hooks/useUserSub'; 
 
 
 const client = generateClient<Schema>();
-console.log("Amplify Config:", client.config);
+//console.log("Amplify Config:", client.config);
 
 // Komponenty
 import PromptCard from './components/PromptCard';
@@ -26,7 +26,7 @@ import {
   FilterOptions,
   TeamMember,
   SidebarCategory,
-  PromptHistoryItem
+  //PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {

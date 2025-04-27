@@ -26,6 +26,9 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
     };
 
     const handleSubmit = () => {
+        console.log("Rozpoczęcie zapisywania...");
+        console.log("Aktualne dane:", editedPrompt);
+        
         if (!prompt) return;
 
         const currentHistoryItem: PromptHistoryItem = {
@@ -48,6 +51,7 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
         };
 
         onSave(updatedPrompt);
+        onClose();
     };
 
     if (!isOpen) return null;

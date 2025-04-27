@@ -5,10 +5,12 @@ import { filterPrompts } from './utils/filterUtils';
 import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
+import type { Prompt as PromptType } from './types/interfaces';
 import { useUserSub } from './hooks/useUserSub'; 
 
 
 const client = generateClient<Schema>();
+console.log("Amplify Config:", client.config);
 
 // Komponenty
 import PromptCard from './components/PromptCard';
@@ -167,64 +169,28 @@ const App: React.FC = () => {
     ];
 
         // Pobieranie promptów z bazy danych
-    useEffect(() => {
-        const subscription = client.models.Prompt.observeQuery({
-            selectionSet: [
-                "id",
-                "title",
-                "description",
-                "content",
-                "tags",
-                "authorId",
-                "creationDate",
-                "lastModifiedDate",
-                "latestVersion.content",
-                "latestVersion.versionNumber",
-                "latestVersion.creationDate",
-                "versions.content",
-                "versions.versionNumber",
-                "versions.creationDate"
-            ]
-        }).subscribe({
-            next: ({ items }) => {
-                const transformedPrompts: Prompt[] = items.map((p: any) => {
-                    const id = parseInt(p.id, 10);
-                    const versions = p.versions?.items || [];
-                    const sortedVersions = [...versions].sort((a, b) =>
-                        parseInt(b.versionNumber) - parseInt(a.versionNumber)
-                    );
-
-                    const history: PromptHistoryItem[] = sortedVersions.map(v => ({
-                        version: parseInt(v.versionNumber),
-                        date: new Date(v.creationDate).toLocaleDateString(),
-                        changes: `Version ${v.versionNumber}`,
-                        content: v.content
-                    }));
-
-                    return {
-                        id: id,
-                        title: p.title,
-                        description: p.description || '',
-                        tags: p.tags?.filter(Boolean) || [],
-                        author: p.authorId,
-                        date: new Date(p.lastModifiedDate).toLocaleDateString(),
-                        usageCount: 0,
-                        promptContent: p.content,
-                        history: history.length > 0 ? history : undefined
-                    };
-                });
-
-                setFetchedPrompts(transformedPrompts);
-                setFilteredPrompts(transformedPrompts); // Ustawiamy również przefiltrowane prompty
-            },
-            error: (err) => {
-                console.error("Błąd observeQuery:", err);
-                setError("Nie udało się połączyć z bazą danych.");
-            }
-        });
-
-        return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
-    }, []);
+        useEffect(() => {
+            const subscription = client.models.Prompt.observeQuery({
+                selectionSet: [ // Upewnij się, że pobierasz wszystkie potrzebne pola
+                    "id", "title", "description", "content",
+                    "tags", "authorId", "creationDate", "lastModifiedDate",
+                    "latestVersion.content", "versions.*" // jeśli potrzebujesz historii
+                ]
+            }).subscribe({
+                next: ({ items }) => {
+                    // Użyj funkcji transformującej tutaj
+                    const transformedPrompts: Prompt[] = items.map(transformAmplifyDataToPrompt);
+                    setFetchedPrompts(transformedPrompts);
+                    setError(null); // Wyczyść błąd po udanym pobraniu
+                },
+                error: (err) => {
+                    console.error("Błąd observeQuery:", err);
+                    setError("Nie udało się połączyć z bazą danych.");
+                }
+            });
+        
+            return () => subscription.unsubscribe();
+        }, []);
 
 
     
@@ -238,6 +204,34 @@ const App: React.FC = () => {
         }
     }, []);
 
+    useEffect(() => {
+        // Automatyczna aktualizacja filtrów gdy zmieniają się dane
+        applyFilters();
+    }, [fetchedPrompts]);
+
+    useEffect(() => {
+        // Ten useEffect synchronizuje selectedPrompt z aktualną listą fetchedPrompts
+        if (selectedPrompt && fetchedPrompts.length > 0) {
+            // Znajdź zaktualizowaną wersję wybranego promptu na liście
+            const updatedVersionInList = fetchedPrompts.find(p => String(p.id) === String(selectedPrompt.id));
+    
+            if (updatedVersionInList) {
+                // Sprawdź, czy dane faktycznie się zmieniły, aby uniknąć niepotrzebnych re-renderów
+                // (proste porównanie stringów JSON, można użyć głębszego porównania, jeśli potrzebne)
+                if (JSON.stringify(selectedPrompt) !== JSON.stringify(updatedVersionInList)) {
+                    console.log('Aktualizowanie selectedPrompt z fetchedPrompts...');
+                    setSelectedPrompt(updatedVersionInList);
+                }
+            } else {
+                // Opcjonalnie: Obsłuż przypadek, gdy wybrany prompt został usunięty z listy
+                console.log('Wybrany prompt nie znaleziony na liście, być może został usunięty.');
+                setSelectedPrompt(null);
+                setIsPromptDetailOpen(false);
+            }
+        }
+        // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
+    }, [fetchedPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
+    
     // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -404,24 +398,88 @@ const App: React.FC = () => {
         }
     };
 
-// Obsługa zapisania zmian w promptcie
-    const handleSaveEditedPrompt = (updatedPrompt: Prompt) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API do aktualizacji promptu
-        console.log('Aktualizacja promptu:', updatedPrompt);
-        alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
-
-        // Aktualizujemy prompt lokalnie (mockup)
-        filteredPrompts.map(p =>
-            p.id === updatedPrompt.id ? updatedPrompt : p
-        );
-
-        // Aktualizujemy wybrany prompt
-        setSelectedPrompt(updatedPrompt);
-
-        // Zamykamy okno edycji i otwieramy ponownie podgląd
-        setIsEditPromptOpen(false);
-        setIsPromptDetailOpen(true);
+    const handleSaveEditedPrompt = async (editedPromptData: any) => { // Możesz użyć bardziej konkretnego typu, np. z EditPrompt
+        if (!editingPrompt) return;
+    
+        console.log("Rozpoczynanie zapisu edycji (App.tsx)...", editedPromptData); // Dodaj log tutaj
+    
+        try {
+            // --- Bezpieczne przetwarzanie tagów ---
+            let tagsArray: string[] = []; // Domyślnie pusta tablica
+            if (typeof editedPromptData.tags === 'string') {
+                // Jeśli jest stringiem, podziel, oczyść i odfiltruj puste
+                tagsArray = editedPromptData.tags.split(',')
+                                .map((tag: string) => tag.trim())
+                                .filter(Boolean);
+            } else {
+                console.warn("Ostrzeżenie: editedPromptData.tags nie jest stringiem:", editedPromptData.tags);
+                // Możesz zdecydować, czy zachować istniejące tagi, jeśli nie jest stringiem
+                // np. if (Array.isArray(editedPromptData.tags)) tagsArray = editedPromptData.tags;
+            }
+            // ------------------------------------
+    
+            const updateData = {
+                id: String(editingPrompt.id),
+                title: editedPromptData.title,
+                description: editedPromptData.description,
+                content: editedPromptData.content, // Zakładając, że content jest poprawnie przekazany
+                tags: tagsArray, // Użyj przetworzonej tablicy tagów
+                lastModifiedDate: new Date().toISOString(),
+            };
+    
+            console.log("Dane do wysłania (update):", updateData);
+    
+            const { data: updatedPrompt, errors } = await client.models.Prompt.update(updateData);
+    
+            console.log("Odpowiedź z Amplify update:", { updatedPrompt, errors });
+    
+            if (errors) {
+                console.error("BŁĘDY zwrócone przez Amplify update:", errors);
+                setError("Nie udało się zapisać zmian w promcie.");
+                return;
+            }
+    
+            console.log("Prompt zaktualizowany pomyślnie (bez błędów w odpowiedzi Amplify):", updatedPrompt);
+    
+            // Wywołaj powiadomienie o sukcesie, jeśli używasz
+            // showSuccessNotification("Prompt został pomyślnie zaktualizowany!");
+    
+            setIsEditPromptOpen(false);
+            setIsPromptDetailOpen(true);
+    
+    
+        } catch (error) {
+            // Ten blok catch złapał błąd TypeError
+            console.error("Nieoczekiwany błąd CATCH podczas zapisywania edytowanego promptu:", error);
+            setError("Wystąpił nieoczekiwany błąd podczas zapisywania zmian.");
+        }
     };
+    
+    // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
+    // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
+    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => {
+        return {
+            // Zakładamy, że ID w stanie React jest number, a w Amplify string
+            id: amplifyData.id,
+            title: amplifyData.title,
+            description: amplifyData.description || '',
+            tags: amplifyData.tags?.filter(Boolean) || [],
+            author: amplifyData.authorId, // W schemacie jest authorId
+            date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(), // Użyj lastModifiedDate
+            usageCount: 0, // Dostosuj, jeśli masz to pole
+            // ---- WAŻNA ZMIANA: mapowanie 'content' ze schematu na 'promptContent' w interfejsie ----
+            promptContent: amplifyData.content,
+            // --------------------------------------------------------------------------------------
+            history: amplifyData.versions?.map((v: any) => ({
+                version: parseInt(v.versionNumber, 10),
+                date: new Date(v.creationDate).toLocaleDateString(),
+                changes: "Edycja",
+                content: v.content
+            })) || []
+        };
+    }
+  
+  
 
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
@@ -487,7 +545,8 @@ const App: React.FC = () => {
           date: filterDate
         };
       
-        const results = filterPrompts(filteredPrompts, updatedFilters, filterCategory);
+        // Zmiana źródła danych z filteredPrompts na fetchedPrompts
+        const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
         setFilteredPrompts(results);
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
@@ -495,7 +554,7 @@ const App: React.FC = () => {
         if (options.closePanel) {
           setIsFilterPanelVisible(false);
         }
-      };
+    };
       
 
     useEffect(() => {
@@ -538,21 +597,6 @@ const App: React.FC = () => {
         // Użyj uniwersalnej funkcji filtrowania
         applyFilters({ category });
     };
-
-    // Efekt do inicjalizacji filtrowanych promptów przy pierwszym renderowaniu
-    useEffect(() => {
-        applyFilters();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    // Efekt uruchamiany tylko przy pierwszym renderowaniu i zmianach kategorii
-    useEffect(() => {
-        // Inicjalizacja filtrów przy pierwszym renderowaniu
-        if (filteredPrompts.length === 0) {
-            applyFilters();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
 
     const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const query = e.target.value;
@@ -919,7 +963,7 @@ const App: React.FC = () => {
                     isOpen={isEditPromptOpen}
                     onClose={() => {
                         setIsEditPromptOpen(false);
-                        setIsPromptDetailOpen(true); // Powrót do podglądu po anulowaniu
+                        setIsPromptDetailOpen(true);
                     }}
                     prompt={editingPrompt}
                     onSave={handleSaveEditedPrompt}

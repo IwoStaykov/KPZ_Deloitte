@@ -14,8 +14,8 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
             setEditedPrompt({
                 title: prompt.title,
                 description: prompt.description,
-                tags: prompt.tags.join(', '),
-                content: prompt.promptContent
+                tags: prompt.tags.join(', ') || '',
+                content: prompt.promptContent || ''
             });
         }
     }, [prompt]);
@@ -35,16 +35,20 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
             version: (prompt.history?.length || 0) + 1,
             date: new Date().toLocaleDateString(),
             changes: 'Edycja promptu',
-            content: prompt.promptContent
+            content: editedPrompt.content
         };
 
         const updatedHistory = prompt.history ? [...prompt.history, currentHistoryItem] : [currentHistoryItem];
+
+        const processedTags = editedPrompt.tags 
+        ? editedPrompt.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        : [];
 
         const updatedPrompt: Prompt = {
             ...prompt,
             title: editedPrompt.title,
             description: editedPrompt.description,
-            tags: editedPrompt.tags.split(',').map(tag => tag.trim()),
+            tags: processedTags,
             promptContent: editedPrompt.content,
             date: 'Teraz',
             history: updatedHistory

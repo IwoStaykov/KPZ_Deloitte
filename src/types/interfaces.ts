@@ -72,7 +72,7 @@ export interface Prompt {
     author: string;
     date: string;
     usageCount: number;
-    promptContent: string;
+    content: string;
     history?: PromptHistoryItem[];
 }
 

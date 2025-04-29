@@ -232,6 +232,13 @@ const App: React.FC = () => {
         // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
     }, [fetchedPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
     
+    useEffect(() => {
+        if (selectedPrompt) {
+            const updatedPrompt = fetchedPrompts.find(p => p.id === selectedPrompt.id);
+            if (updatedPrompt) setSelectedPrompt(updatedPrompt);
+        }
+    }, [fetchedPrompts]);
+
     // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -404,25 +411,21 @@ const App: React.FC = () => {
         console.log("Rozpoczynanie zapisu edycji (App.tsx)...", editedPromptData); // Dodaj log tutaj
     
         try {
-            // --- Bezpieczne przetwarzanie tagów ---
-            let tagsArray: string[] = []; // Domyślnie pusta tablica
-            if (typeof editedPromptData.tags === 'string') {
-                // Jeśli jest stringiem, podziel, oczyść i odfiltruj puste
-                tagsArray = editedPromptData.tags.split(',')
-                                .map((tag: string) => tag.trim())
-                                .filter(Boolean);
+            let tagsArray = [];
+            if (editedPromptData.tags) {
+                tagsArray = typeof editedPromptData.tags === 'string' 
+                    ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) 
+                    : [...editedPromptData.tags];
             } else {
-                console.warn("Ostrzeżenie: editedPromptData.tags nie jest stringiem:", editedPromptData.tags);
-                // Możesz zdecydować, czy zachować istniejące tagi, jeśli nie jest stringiem
-                // np. if (Array.isArray(editedPromptData.tags)) tagsArray = editedPromptData.tags;
+                // Zachowaj istniejące tagi jeśli nie ma nowych
+                tagsArray = [...editingPrompt.tags];
             }
-            // ------------------------------------
     
             const updateData = {
                 id: String(editingPrompt.id),
                 title: editedPromptData.title,
                 description: editedPromptData.description,
-                content: editedPromptData.content, // Zakładając, że content jest poprawnie przekazany
+                content: editedPromptData.promptContent,
                 tags: tagsArray,
                 lastModifiedDate: new Date().toISOString(),
             };
@@ -430,7 +433,7 @@ const App: React.FC = () => {
             console.log("Dane do wysłania (update):", updateData);
     
             const { data: updatedPrompt, errors } = await client.models.Prompt.update(updateData);
-    
+            
             console.log("Odpowiedź z Amplify update:", { updatedPrompt, errors });
     
             if (errors) {
@@ -455,25 +458,22 @@ const App: React.FC = () => {
     
     // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
     // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
-    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => {
-        return {
-            // Zakładamy, że ID w stanie React jest number, a w Amplify string
-            id: amplifyData.id,
-            title: amplifyData.title,
-            description: amplifyData.description || '',
-            tags: amplifyData.tags?.filter(Boolean) || [],
-            author: amplifyData.authorId, // W schemacie jest authorId
-            date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(), // Użyj lastModifiedDate
-            usageCount: 0, // Dostosuj, jeśli masz to pole
-            promptContent: amplifyData.content || '',
-            history: amplifyData.versions?.map((v: any) => ({
-                version: parseInt(v.versionNumber, 10),
-                date: new Date(v.creationDate).toLocaleDateString(),
-                changes: "Edycja",
-                content: v.content
-            })) || []
-        };
-    }
+    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => ({
+        id: amplifyData.id,
+        title: amplifyData.title,
+        description: amplifyData.description || '',
+        tags: amplifyData.tags?.filter(Boolean) || [],
+        author: amplifyData.authorId,
+        date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(),
+        usageCount: 0,
+        promptContent: amplifyData.content || amplifyData.promptContent || '',
+        history: amplifyData.versions?.map((v: any) => ({
+            version: parseInt(v.versionNumber, 10),
+            date: new Date(v.creationDate).toLocaleDateString(),
+            changes: "Edycja",
+            content: v.content
+        })) || []
+    });
   
   
 

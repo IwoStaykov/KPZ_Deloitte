@@ -7,6 +7,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
 import { useUserSub } from './hooks/useUserSub'; 
 import { Pagination } from '@aws-amplify/ui-react';
+import { getUserName } from './utils/client-utils';
 
 
 const client = generateClient<Schema>();
@@ -66,7 +67,7 @@ const App: React.FC = () => {
 
     const filterPanelRef = useRef<HTMLDivElement>(null);
 
-    const { signOut } = useAuthenticator();
+    const { signOut} = useAuthenticator();
     const { sub: userSub} = useUserSub();
 
 
@@ -196,7 +197,7 @@ const App: React.FC = () => {
                 "description",
                 "content",
                 "tags",
-                "authorId",
+                "authorName",
                 "creationDate",
                 "lastModifiedDate",
                 "latestVersion.content",
@@ -227,7 +228,7 @@ const App: React.FC = () => {
                         title: p.title,
                         description: p.description || '',
                         tags: p.tags?.filter(Boolean) || [],
-                        author: p.authorId,
+                        author: p.authorName,
                         date: new Date(p.lastModifiedDate).toLocaleDateString(),
                         usageCount: 0,
                         promptContent: p.content,
@@ -402,12 +403,15 @@ const App: React.FC = () => {
             alert('Nie można zapisać promptu – brak identyfikatora użytkownika.');
             return;
         }
+        const userName = (await getUserName()) as string;
+
         await client.models.Prompt.create({
             title: newPrompt.title,
             description: newPrompt.description,
             content: newPrompt.content,
             tags: newPrompt.tags.split(',').map(tag => tag.trim()),
             authorId: userSub, // Używamy sub z Cognito jako ID autora
+            authorName: userName, // Używamy preferowanego imienia lub domyślnej wartości
             creationDate: new Date().toISOString(),
             lastModifiedDate: new Date().toISOString()
         });

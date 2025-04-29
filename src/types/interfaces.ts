@@ -31,6 +31,8 @@ export interface PromptDetailProps {
     promptContent: string;
     history?: PromptHistoryItem[];
     onEdit: () => void;
+    onDelete: (promptId: string) => void;
+    selectedPrompt: Prompt;
 }
 
 export interface PromptHistoryItem {
@@ -65,14 +67,14 @@ export interface EditPromptProps {
 }
 
 export interface Prompt {
-    id: number;
+    id: string;
     title: string;
     description: string;
     tags: string[];
     author: string;
     date: string;
     usageCount: number;
-    content: string;
+    promptContent: string;
     history?: PromptHistoryItem[];
 }
 

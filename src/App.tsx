@@ -456,6 +456,20 @@ const App: React.FC = () => {
         }
     };
     
+    const handleDeletePrompt = async (promptId: string) => {
+        if (window.confirm('Czy na pewno chcesz usunąć ten prompt? Operacja jest nieodwracalna.')) {
+            try {
+                await client.models.Prompt.delete({ id: promptId });
+                setFetchedPrompts(prev => prev.filter(p => p.id !== promptId));
+                setIsPromptDetailOpen(false);
+                alert('Prompt został pomyślnie usunięty!');
+            } catch (error) {
+                console.error('Błąd podczas usuwania:', error);
+                alert('Wystąpił błąd podczas usuwania promptu');
+            }
+        }
+    };
+
     // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
     // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
     const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => ({
@@ -756,6 +770,8 @@ const App: React.FC = () => {
                         promptContent={selectedPrompt.promptContent}
                         history={selectedPrompt.history}
                         onEdit={handleEditPrompt}
+                        onDelete={handleDeletePrompt}
+                        selectedPrompt={selectedPrompt}
                     />
                 ) : (
                     <div className="content-container">

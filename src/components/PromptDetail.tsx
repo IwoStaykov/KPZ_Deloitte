@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { PromptDetailProps} from '../types/interfaces';
+import { PromptDetailProps } from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
     isOpen, onClose, title, tags, description, author, date, usageCount,
-    promptContent, history = [], onEdit
+    promptContent, history = [], onEdit,
+    onDelete, selectedPrompt
 }) => {
     const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -121,7 +122,14 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                     <button className="btn edit-btn" onClick={onEdit}>
                         <i className="bi bi-pencil"></i> Edit
                     </button>
+                    <button 
+                        className="btn delete-btn" 
+                        onClick={() => onDelete(selectedPrompt.id)}
+                    >
+                        <i className="bi bi-trash"></i> Delete
+                    </button>
                     <button className="btn use-btn">Use This Prompt</button>
+
                 </div>
             </div>
         </div>

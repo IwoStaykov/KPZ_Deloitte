@@ -398,7 +398,7 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSaveEditedPrompt = async (editedPromptData: any) => { // Możesz użyć bardziej konkretnego typu, np. z EditPrompt
+    const handleSaveEditedPrompt = async (editedPromptData: any) => {
         if (!editingPrompt) return;
     
         console.log("Rozpoczynanie zapisu edycji (App.tsx)...", editedPromptData); // Dodaj log tutaj
@@ -423,7 +423,7 @@ const App: React.FC = () => {
                 title: editedPromptData.title,
                 description: editedPromptData.description,
                 content: editedPromptData.content, // Zakładając, że content jest poprawnie przekazany
-                tags: tagsArray, // Użyj przetworzonej tablicy tagów
+                tags: tagsArray,
                 lastModifiedDate: new Date().toISOString(),
             };
     
@@ -441,15 +441,13 @@ const App: React.FC = () => {
     
             console.log("Prompt zaktualizowany pomyślnie (bez błędów w odpowiedzi Amplify):", updatedPrompt);
     
-            // Wywołaj powiadomienie o sukcesie, jeśli używasz
-            // showSuccessNotification("Prompt został pomyślnie zaktualizowany!");
+            alert("Zmiany w prompcie zostały pomyślnie zapisane!");
     
             setIsEditPromptOpen(false);
             setIsPromptDetailOpen(true);
     
     
         } catch (error) {
-            // Ten blok catch złapał błąd TypeError
             console.error("Nieoczekiwany błąd CATCH podczas zapisywania edytowanego promptu:", error);
             setError("Wystąpił nieoczekiwany błąd podczas zapisywania zmian.");
         }
@@ -467,9 +465,7 @@ const App: React.FC = () => {
             author: amplifyData.authorId, // W schemacie jest authorId
             date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(), // Użyj lastModifiedDate
             usageCount: 0, // Dostosuj, jeśli masz to pole
-            // ---- WAŻNA ZMIANA: mapowanie 'content' ze schematu na 'promptContent' w interfejsie ----
-            promptContent: amplifyData.content,
-            // --------------------------------------------------------------------------------------
+            promptContent: amplifyData.content || '',
             history: amplifyData.versions?.map((v: any) => ({
                 version: parseInt(v.versionNumber, 10),
                 date: new Date(v.creationDate).toLocaleDateString(),
@@ -972,14 +968,14 @@ const App: React.FC = () => {
 
             {/* Dodanie modalu zespołu do renderowania */}
             {isTeamModalOpen && (
-                <TeamModal
-                    isOpen={isTeamModalOpen}
-                    onClose={handleCloseTeamModal}
-                    members={teamMembers}
-                    currentUserRole={currentUserRole}
-                    teamPrompts={teamPrompts}
-                />
-            )}
+            <TeamModal
+                isOpen={isTeamModalOpen}
+                onClose={handleCloseTeamModal}
+                members={teamMembers}
+                teamPrompts={teamPrompts}
+                currentUserRole={currentUserRole}
+            />
+        )}
         </div>
     );
 };

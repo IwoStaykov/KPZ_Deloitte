@@ -1,5 +1,10 @@
 import { Prompt, TeamMember } from '../types/interfaces';
 
+// This file contains mock data for prompts and team members
+// to be used in the application. The data is structured to simulate a real-world scenario
+// and can be used for testing and development purposes.
+// The prompts include various attributes such as title, description, tags, author, date, usage count,
+
 export const prompts: Prompt[] = [
   {
     id: "1",

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import './App.css';
 import { initialTeamMembers } from './data/mockPrompts';
 import { filterPrompts } from './utils/filterUtils';
@@ -6,6 +6,8 @@ import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
 import { useUserSub } from './hooks/useUserSub'; 
+import { Pagination } from '@aws-amplify/ui-react';
+import { getUserName } from './utils/client-utils';
 
 
 const client = generateClient<Schema>();
@@ -32,7 +34,6 @@ const App: React.FC = () => {
 
 
     // Stany
-    const [fetchedPrompts, setFetchedPrompts] = useState<Prompt[]>([]);
     const [, setError] = useState<string | null>(null);
     const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
     const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(false); // Domyślnie ukryty
@@ -66,8 +67,30 @@ const App: React.FC = () => {
 
     const filterPanelRef = useRef<HTMLDivElement>(null);
 
-    const { signOut } = useAuthenticator();
+    const { signOut} = useAuthenticator();
     const { sub: userSub} = useUserSub();
+
+
+    const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
+    const [currentPage, setCurrentPage] = useState(0);
+    const PAGE_SIZE = 10;
+    
+    const filteredPrompts = useMemo(() => {
+        return filterPrompts(allPrompts, searchFilters, selectedCategory);
+    }, [allPrompts, searchFilters, selectedCategory]);
+    
+    const displayedPrompts = useMemo(() => {
+        const startIdx = currentPage * PAGE_SIZE;
+        return filteredPrompts.slice(startIdx, startIdx + PAGE_SIZE);
+    }, [filteredPrompts, currentPage]);
+    
+    const totalFilteredCount = filteredPrompts.length;
+    
+    useEffect(() => {
+        console.log("filteredPrompts", filteredPrompts.map(p => p.id));
+        console.log("currentPage", currentPage);
+        console.log("displayedPrompts", displayedPrompts.map(p => p.id));
+    }, [filteredPrompts, displayedPrompts]);
 
 // Dodanie efektu dla obsługi kliknięć poza panelem filtrów
     useEffect(() => {
@@ -91,8 +114,7 @@ const App: React.FC = () => {
         };
     }, [isFilterPanelVisible]);
 
-    // Stan dla przechowywania wyfiltrowanych promptów
-    const [filteredPrompts, setFilteredPrompts] = useState<Prompt[]>([])
+   
 
 
     const [newPrompt, setNewPrompt] = useState<{
@@ -175,7 +197,7 @@ const App: React.FC = () => {
                 "description",
                 "content",
                 "tags",
-                "authorId",
+                "authorName",
                 "creationDate",
                 "lastModifiedDate",
                 "latestVersion.content",
@@ -188,7 +210,7 @@ const App: React.FC = () => {
         }).subscribe({
             next: ({ items }) => {
                 const transformedPrompts: Prompt[] = items.map((p: any) => {
-                    const id = parseInt(p.id, 10);
+                    const id = p.id
                     const versions = p.versions?.items || [];
                     const sortedVersions = [...versions].sort((a, b) =>
                         parseInt(b.versionNumber) - parseInt(a.versionNumber)
@@ -206,7 +228,7 @@ const App: React.FC = () => {
                         title: p.title,
                         description: p.description || '',
                         tags: p.tags?.filter(Boolean) || [],
-                        author: p.authorId,
+                        author: p.authorName,
                         date: new Date(p.lastModifiedDate).toLocaleDateString(),
                         usageCount: 0,
                         promptContent: p.content,
@@ -214,8 +236,8 @@ const App: React.FC = () => {
                     };
                 });
 
-                setFetchedPrompts(transformedPrompts);
-                setFilteredPrompts(transformedPrompts); // Ustawiamy również przefiltrowane prompty
+              
+                setAllPrompts(transformedPrompts);
             },
             error: (err) => {
                 console.error("Błąd observeQuery:", err);
@@ -224,9 +246,10 @@ const App: React.FC = () => {
         });
 
         return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
-    }, []);
+    }, []); 
 
-
+    
+      
     
     // Efekty
     useEffect(() => {
@@ -268,7 +291,7 @@ const App: React.FC = () => {
         setCurrentUserRole('leader');
 
         // Inicjalizujemy prompty zespołu - dla przykładu używamy pierwszych dwóch standardowych promptów
-        setTeamPrompts(fetchedPrompts.slice(0, 2));
+        setTeamPrompts(allPrompts.slice(0, 2));
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     // tak wiem w tamtej lini jest błąd. narazie tak zostawiamy.
 
@@ -380,12 +403,15 @@ const App: React.FC = () => {
             alert('Nie można zapisać promptu – brak identyfikatora użytkownika.');
             return;
         }
+        const userName = (await getUserName()) as string;
+
         await client.models.Prompt.create({
             title: newPrompt.title,
             description: newPrompt.description,
             content: newPrompt.content,
             tags: newPrompt.tags.split(',').map(tag => tag.trim()),
             authorId: userSub, // Używamy sub z Cognito jako ID autora
+            authorName: userName, // Używamy preferowanego imienia lub domyślnej wartości
             creationDate: new Date().toISOString(),
             lastModifiedDate: new Date().toISOString()
         });
@@ -410,10 +436,6 @@ const App: React.FC = () => {
         console.log('Aktualizacja promptu:', updatedPrompt);
         alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
 
-        // Aktualizujemy prompt lokalnie (mockup)
-        filteredPrompts.map(p =>
-            p.id === updatedPrompt.id ? updatedPrompt : p
-        );
 
         // Aktualizujemy wybrany prompt
         setSelectedPrompt(updatedPrompt);
@@ -447,6 +469,9 @@ const App: React.FC = () => {
         // Aktualizuj stan i zastosuj filtry
         setSearchFilters(newFilters);
         applyFilters({ ...newFilters, closePanel: true });
+
+        // Reset paginacji przy nowych filtrach
+        setCurrentPage(0);
     };
 
 // Obsługa resetowania filtrów
@@ -487,8 +512,6 @@ const App: React.FC = () => {
           date: filterDate
         };
       
-        const results = filterPrompts(filteredPrompts, updatedFilters, filterCategory);
-        setFilteredPrompts(results);
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
       
@@ -548,9 +571,6 @@ const App: React.FC = () => {
     // Efekt uruchamiany tylko przy pierwszym renderowaniu i zmianach kategorii
     useEffect(() => {
         // Inicjalizacja filtrów przy pierwszym renderowaniu
-        if (filteredPrompts.length === 0) {
-            applyFilters();
-        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -723,7 +743,7 @@ const App: React.FC = () => {
                             <div className="d-flex align-items-center">
                                 <h3>Prompts</h3>
                                 <span className="prompt-count ms-3">
-      {filteredPrompts.length} z {fetchedPrompts.length} wyników
+      {displayedPrompts.length} z {filteredPrompts.length} wyników
     </span>
 
                                 {/* Wskaźniki aktywnych filtrów */}
@@ -799,18 +819,35 @@ const App: React.FC = () => {
 
                         <div className="row g-4">
                             {filteredPrompts.length > 0 ? (
-                                filteredPrompts.map((prompt) => (
+                                <>
+                                {displayedPrompts.map((prompt) => (
                                     <div className="col-lg-4 col-md-6" key={prompt.id}>
-                                        <PromptCard
-                                            title={prompt.title}
-                                            description={prompt.description}
-                                            tags={prompt.tags}
-                                            author={prompt.author}
-                                            date={prompt.date}
-                                            onClick={() => handlePromptClick(prompt)}
-                                        />
+                                    <PromptCard
+                                        title={prompt.title}
+                                        description={prompt.description}
+                                        tags={prompt.tags}
+                                        author={prompt.author}
+                                        date={prompt.date}
+                                        onClick={() => handlePromptClick(prompt)}
+                                    />
                                     </div>
-                                ))
+                                ))}
+                                
+                                <div className="col-12 mt-4">
+                                    <Pagination
+                                        currentPage={currentPage + 1}
+                                        totalPages={Math.ceil(totalFilteredCount / PAGE_SIZE)}
+                                        onNext={() => setCurrentPage(prev => prev + 1)}
+                                        onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                        onChange={(newPageIndex?: number) => {
+                                            if (newPageIndex !== undefined) {
+                                            setCurrentPage(newPageIndex - 1); // Konwersja z 1-based
+                                            }
+                                        }}
+                                        siblingCount={1}
+                                    />
+                                </div>
+                                </>
                             ) : (
                                 <div className="col-12 text-center py-5">
                                     <div className="no-results">

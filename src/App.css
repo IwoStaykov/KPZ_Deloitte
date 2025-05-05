@@ -1421,3 +1421,30 @@ input:checked + .toggle-slider:before {
         opacity: 0.5;
     }
 }
+
+  .sort-controls {
+    margin-left: auto;
+  }
+  
+  .dropdown-toggle {
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+  }
+  
+  .dropdown-item.active {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+  }
+  
+  .dropdown-item .bi {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+  }

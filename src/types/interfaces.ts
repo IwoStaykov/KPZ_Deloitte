@@ -84,3 +84,5 @@ export interface FilterOptions {
     category?: string;
     closePanel?: boolean;
 }
+
+export type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc';

@@ -7,6 +7,9 @@ import '@aws-amplify/ui-react/styles.css';
 import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
 
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'; 
+
 Amplify.configure(outputs);
 
 const root = ReactDOM.createRoot(

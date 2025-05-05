@@ -1,25 +1,72 @@
-## AWS Amplify React+Vite Starter Template
+# KPZ_Deloitte – Aplikacja do zarządzania promptami
+Hakerzy nie kodują, piszą prompty.
+Aplikacja umożliwia tworzenie, wersjonowanie i współdzielenie promptów w środowisku chmurowym. Projekt został zbudowany z wykorzystaniem React + Vite oraz AWS Amplify, co zapewnia skalowalność i łatwość wdrożenia.
 
-This repository provides a starter template for creating applications using React+Vite and AWS Amplify, emphasizing easy setup for authentication, API, and database capabilities.
+## 📦 Technologie
+Frontend: React + Vite + TypeScript
 
-## Overview
+Backend: AWS Amplify (Cognito, AppSync, DynamoDB)
 
-This template equips you with a foundational React application integrated with AWS Amplify, streamlined for scalability and performance. It is ideal for developers looking to jumpstart their project with pre-configured AWS services like Cognito, AppSync, and DynamoDB.
+Hosting: AWS Amplify Hosting
 
-## Features
+Zarządzanie stanem: React Context API
 
-- **Authentication**: Setup with Amazon Cognito for secure user authentication.
-- **API**: Ready-to-use GraphQL endpoint with AWS AppSync.
-- **Database**: Real-time database powered by Amazon DynamoDB.
+Stylizacja: CSS Modules / Tailwind CSS (jeśli używane)
 
-## Deploying to AWS
+## 🚀 Funkcje
+✅ Tworzenie i edycja promptów
 
-For detailed instructions on deploying your application, refer to the [deployment section](https://docs.amplify.aws/react/start/quickstart/#deploy-a-fullstack-app-to-aws) of our documentation.
+📜 Historia wersji z możliwością porównania zmian
 
-## Security
+👥 Współdzielenie promptów z innymi użytkownikami
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+🔐 Autoryzacja i uwierzytelnianie przez Amazon Cognito
 
-## License
+☁️ Wdrożenie w chmurze AWS Amplify
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+## 🛠️ Instalacja i uruchomienie lokalne
+Klonowanie repozytorium:
+
+bash
+Kopiuj
+Edytuj
+git clone https://github.com/IwoStaykov/KPZ_Deloitte.git
+cd KPZ_Deloitte
+Instalacja zależności:
+
+bash
+Kopiuj
+Edytuj
+npm install
+Uruchomienie aplikacji:
+
+bash
+Kopiuj
+Edytuj
+npm run dev
+Aplikacja będzie dostępna pod adresem: http://localhost:5173
+
+## 🌐 Wdrożenie w chmurze (AWS Amplify)
+Projekt jest zintegrowany z AWS Amplify, co umożliwia łatwe wdrożenie i skalowanie aplikacji. Plik amplify.yml zawiera konfigurację procesu CI/CD.
+
+Aby wdrożyć aplikację:
+
+Zaloguj się do AWS Amplify Console.
+
+Połącz repozytorium GitHub i wybierz gałąź dev.
+
+Amplify automatycznie zbuduje i wdroży aplikację.
+
+## 📁 Struktura projektu
+
+KPZ_Deloitte/
+├── amplify/            # Konfiguracja AWS Amplify
+├── public/             # Pliki statyczne
+├── src/                # Kod źródłowy aplikacji
+│   ├── components/     # Komponenty React
+│   ├── pages/          # Strony aplikacji
+│   ├── types/          # Definicje typów TypeScript
+│   └── App.tsx         # Główny komponent aplikacji
+├── amplify.yml         # Konfiguracja Amplify CI/CD
+├── package.json        # Zależności projektu
+└── README.md           # Dokumentacja projektu

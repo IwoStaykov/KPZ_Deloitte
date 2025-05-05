@@ -8,6 +8,7 @@ const schema = a.schema({
       content: a.string().required(),
       tags: a.string().array(),
       authorId: a.id().required(), // sub z Cognito
+      authorName: a.string().required(),
       creationDate: a.datetime().required(),
       lastModifiedDate: a.datetime().required(),
       latestVersionId: a.id(),

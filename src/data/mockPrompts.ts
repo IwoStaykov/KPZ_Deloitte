@@ -2,7 +2,7 @@ import { Prompt, TeamMember } from '../types/interfaces';
 
 export const prompts: Prompt[] = [
   {
-    id: '1',
+    id: "1",
     title: 'SEO Blog Post Generator',
     description: 'Create SEO-optimized blog posts with proper headings, keywords, and meta descriptions.',
     tags: ['SEO', 'Content', 'Blog'],
@@ -32,7 +32,7 @@ export const prompts: Prompt[] = [
     ]
   },
   {
-    id: '2',
+    id: "2",
     title: 'Code Refactoring Assistant',
     description: 'Helps refactor code for better readability, efficiency, and adherence to best practices.',
     tags: ['Coding', 'DevTools', 'Refactoring'],
@@ -56,7 +56,7 @@ export const prompts: Prompt[] = [
     ]
   },
   {
-    id: '3',
+    id: "3",
     title: 'UI/UX Feedback Expert',
     description: 'Provides detailed feedback on UI/UX designs with actionable improvement suggestions.',
     tags: ['Design', 'UI/UX', 'Feedback'],

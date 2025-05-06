@@ -11,8 +11,6 @@ Hosting: AWS Amplify Hosting
 
 Zarządzanie stanem: React Context API
 
-Stylizacja: CSS Modules / Tailwind CSS (jeśli używane)
-
 ## 🚀 Funkcje
 ✅ Tworzenie i edycja promptów
 
@@ -69,3 +67,25 @@ KPZ_Deloitte/
 ├── package.json        # Zależności projektu
 └── README.md           # Dokumentacja projektu
 ```
+
+## 🤝 Struktura repozytorium i zasady pracy
+
+W naszym repozytorium przyjęliśmy uporządkowany model pracy z gałęziami, oparty na podejściu Git Flow. Dzięki temu łatwiej nam rozwijać aplikację, testować nowe funkcjonalności i utrzymywać stabilność na głównej gałęzi produkcyjnej.
+
+### 📌 Gałęzie główne
+* main
+Główna gałąź produkcyjna. Trafia tu wyłącznie stabilny, przetestowany kod.
+
+Zmiany mogą być integrowane z main tylko za pomocą pull requestów z dev.
+
+* dev
+Gałąź integracyjna, na której testujemy nowe funkcje. To tu trafiają wszystkie zakończone funkcjonalności zanim zostaną wypuszczone na produkcję.
+
+### 🌱 Gałęzie robocze
+* feature/nazwa-funkcji
+Nowe funkcjonalności są rozwijane na osobnych gałęziach zaczynających się od feature/, które odchodzą od dev.
+Po zakończeniu pracy i zmergowaniu do dev, gałąź może zostać usunięta.
+
+* fix/nazwa-poprawki
+Gałęzie szybkich poprawek dla main, jeśli mimo procesu testowania wystąpił błąd na środowisku produkcyjnym.
+Te gałęzie również powinny być jak najszybciej integrowane i usuwane po zakończeniu prac.

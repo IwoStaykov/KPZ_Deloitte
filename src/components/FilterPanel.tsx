@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface FilterPanelProps {
     filters: {
         query: string;
         author: string;
         tag: string;
-        dateFrom: string;
-        dateTo: string;
+        date: string;
     };
     onReset: () => void;
     onApply: () => void;
@@ -14,39 +13,6 @@ interface FilterPanelProps {
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, isVisible }) => {
-    const [localFilters, setLocalFilters] = useState({
-        dateFrom: filters.dateFrom,
-        dateTo: filters.dateTo
-    });
-
-    useEffect(() => {
-        setLocalFilters({
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo
-        });
-    }, [filters]);
-
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setLocalFilters(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleApply = () => {
-        // Aktualizuj główne filtry przed zastosowaniem
-        const queryInput = document.getElementById('filter-query') as HTMLInputElement;
-        const authorInput = document.getElementById('filter-author') as HTMLInputElement;
-        const tagInput = document.getElementById('filter-tag') as HTMLInputElement;
-        
-        if (queryInput) queryInput.value = queryInput.value || '';
-        if (authorInput) authorInput.value = authorInput.value || '';
-        if (tagInput) tagInput.value = tagInput.value || '';
-        
-        onApply();
-    };
-
     if (!isVisible) return null;
 
     return (
@@ -58,66 +24,22 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                 </button>
             </div>
             <div className="filter-body">
-                <div className="filter-group">
-                    <label htmlFor="filter-query">Query:</label>
-                    <input
-                        type="text"
-                        id="filter-query"
-                        name="query"
-                        className="form-control"
-                        defaultValue={filters.query}
-                        placeholder="Wyszukaj po query..."
-                    />
-                </div>
-                <div className="filter-group">
-                    <label htmlFor="filter-author">Author:</label>
-                    <input
-                        type="text"
-                        id="filter-author"
-                        name="author"
-                        className="form-control"
-                        defaultValue={filters.author}
-                        placeholder="Wyszukaj po autorze..."
-                    />
-                </div>
-                <div className="filter-group">
-                    <label htmlFor="filter-tag">Tag:</label>
-                    <input
-                        type="text"
-                        id="filter-tag"
-                        name="tag"
-                        className="form-control"
-                        defaultValue={filters.tag}
-                        placeholder="Wyszukaj po tagu..."
-                    />
-                </div>
-                <div className="filter-group">
-                    <label htmlFor="filter-dateFrom">Data od:</label>
-                    <input
-                        type="date"
-                        id="filter-dateFrom"
-                        name="dateFrom"
-                        className="form-control"
-                        value={localFilters.dateFrom}
-                        onChange={handleDateChange}
-                        max={localFilters.dateTo || undefined}
-                    />
-                </div>
-                <div className="filter-group">
-                    <label htmlFor="filter-dateTo">Data do:</label>
-                    <input
-                        type="date"
-                        id="filter-dateTo"
-                        name="dateTo"
-                        className="form-control"
-                        value={localFilters.dateTo}
-                        onChange={handleDateChange}
-                        min={localFilters.dateFrom || undefined}
-                    />
-                </div>
+                {['query', 'author', 'tag', 'date'].map((field) => (
+                    <div className="filter-group" key={field}>
+                        <label htmlFor={`filter-${field}`}>{field[0].toUpperCase() + field.slice(1)}:</label>
+                        <input
+                            type="text"
+                            id={`filter-${field}`}
+                            name={field}
+                            className="form-control"
+                            defaultValue={filters[field as keyof typeof filters]}
+                            placeholder={`Wyszukaj po ${field}...`}
+                        />
+                    </div>
+                ))}
             </div>
             <div className="filter-footer">
-                <button className="btn apply-btn" onClick={handleApply}>
+                <button className="btn apply-btn" onClick={onApply}>
                     <i className="bi bi-check-circle"></i> Zastosuj filtry
                 </button>
             </div>

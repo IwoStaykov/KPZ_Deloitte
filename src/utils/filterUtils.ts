@@ -40,29 +40,12 @@ export const filterPrompts = (
     );
   }
 
-
-  // Filtrowanie po zakresie dat
-  if (filters.dateFrom || filters.dateTo) {
-    filtered = filtered.filter(prompt => {
-      // Konwertuj datę promptu na obiekt Date
-      const promptDate = new Date(prompt.date);
-      if (isNaN(promptDate.getTime())) return false; // Pomijaj nieprawidłowe daty
-
-      // Konwertuj daty filtrowania
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-
-      // Ustaw czas dla daty końcowej na koniec dnia
-      if (toDate) {
-        toDate.setHours(23, 59, 59, 999);
-      }
-
-      // Sprawdź zakres dat
-      const isAfterFrom = !fromDate || promptDate >= fromDate;
-      const isBeforeTo = !toDate || promptDate <= toDate;
-
-      return isAfterFrom && isBeforeTo;
-    });
+  // Filtrowanie po dacie
+  if (filters.date?.trim()) {
+    const date = filters.date.toLowerCase().trim();
+    filtered = filtered.filter(prompt =>
+      prompt.date.toLowerCase().includes(date)
+    );
   }
 
   return filtered;

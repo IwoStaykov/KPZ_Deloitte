@@ -26,24 +26,21 @@ Stylizacja: CSS Modules / Tailwind CSS (jeśli używane)
 
 ## 🛠️ Instalacja i uruchomienie lokalne
 Klonowanie repozytorium:
-
-bash
-Kopiuj
-Edytuj
+```
 git clone https://github.com/IwoStaykov/KPZ_Deloitte.git
 cd KPZ_Deloitte
+```
+
 Instalacja zależności:
-
-bash
-Kopiuj
-Edytuj
+```
 npm install
-Uruchomienie aplikacji:
+```
 
-bash
-Kopiuj
-Edytuj
+Uruchomienie aplikacji:
+```
 npm run dev
+```
+
 Aplikacja będzie dostępna pod adresem: http://localhost:5173
 
 ## 🌐 Wdrożenie w chmurze (AWS Amplify)
@@ -58,6 +55,7 @@ Połącz repozytorium GitHub i wybierz gałąź dev.
 Amplify automatycznie zbuduje i wdroży aplikację.
 
 ## 📁 Struktura projektu
+```csharp
 
 KPZ_Deloitte/
 ├── amplify/            # Konfiguracja AWS Amplify
@@ -70,3 +68,4 @@ KPZ_Deloitte/
 ├── amplify.yml         # Konfiguracja Amplify CI/CD
 ├── package.json        # Zależności projektu
 └── README.md           # Dokumentacja projektu
+```

@@ -80,7 +80,8 @@ export interface FilterOptions {
     query?: string;
     author?: string;
     tag?: string;
-    date?: string;
+    dateFrom?: string;
+    dateTo?: string;
     category?: string;
     closePanel?: boolean;
 }

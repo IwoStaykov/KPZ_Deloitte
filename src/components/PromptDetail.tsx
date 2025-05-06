@@ -46,7 +46,13 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             <div className="prompt-info">
                 <p><strong>Description:</strong> {description}</p>
                 <p><strong>Created by:</strong> {author}</p>
-                <p><strong>Last updated:</strong> {date}</p>
+                <p><strong>Last updated:</strong> {new Date(date).toLocaleString("pl-PL", {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+            })}</p>
                 <p><strong>Usage count:</strong> {usageCount.toLocaleString()}</p>
             </div>
 
@@ -106,7 +112,11 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                                         onClick={() => setSelectedVersion(item.version)}
                                     >
                                         <span>Version {item.version}</span>
-                                        <span>{item.date}</span>
+                                        <span>{new Date(item.date).toLocaleDateString("pl-PL", {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })}</span>
                                         <small>{item.changes}</small>
                                     </div>
                                 ))}

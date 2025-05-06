@@ -5,7 +5,8 @@ interface FilterPanelProps {
         query: string;
         author: string;
         tag: string;
-        date: string;
+        dateFrom: string;
+        dateTo: string;
     };
     onReset: () => void;
     onApply: () => void;
@@ -24,19 +25,61 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                 </button>
             </div>
             <div className="filter-body">
-                {['query', 'author', 'tag', 'date'].map((field) => (
-                    <div className="filter-group" key={field}>
-                        <label htmlFor={`filter-${field}`}>{field[0].toUpperCase() + field.slice(1)}:</label>
-                        <input
-                            type="text"
-                            id={`filter-${field}`}
-                            name={field}
-                            className="form-control"
-                            defaultValue={filters[field as keyof typeof filters]}
-                            placeholder={`Wyszukaj po ${field}...`}
-                        />
-                    </div>
-                ))}
+                <div className="filter-group">
+                    <label htmlFor="filter-query">Query:</label>
+                    <input
+                        type="text"
+                        id="filter-query"
+                        name="query"
+                        className="form-control"
+                        defaultValue={filters.query}
+                        placeholder="Wyszukaj po query..."
+                    />
+                </div>
+                <div className="filter-group">
+                    <label htmlFor="filter-author">Author:</label>
+                    <input
+                        type="text"
+                        id="filter-author"
+                        name="author"
+                        className="form-control"
+                        defaultValue={filters.author}
+                        placeholder="Wyszukaj po autorze..."
+                    />
+                </div>
+                <div className="filter-group">
+                    <label htmlFor="filter-tag">Tag:</label>
+                    <input
+                        type="text"
+                        id="filter-tag"
+                        name="tag"
+                        className="form-control"
+                        defaultValue={filters.tag}
+                        placeholder="Wyszukaj po tagu..."
+                    />
+                </div>
+                <div className="filter-group">
+                    <label htmlFor="filter-dateFrom">Data od:</label>
+                    <input
+                        type="date"
+                        id="filter-dateFrom"
+                        name="dateFrom"
+                        className="form-control"
+                        defaultValue={filters.dateFrom}
+                        max={filters.dateTo || undefined} // Ogranicza dateFrom do dateTo jeśli istnieje
+                    />
+                </div>
+                <div className="filter-group">
+                    <label htmlFor="filter-dateTo">Data do:</label>
+                    <input
+                        type="date"
+                        id="filter-dateTo"
+                        name="dateTo"
+                        className="form-control"
+                        defaultValue={filters.dateTo}
+                        min={filters.dateFrom || undefined} // Ogranicza dateTo do dateFrom jeśli istnieje
+                    />
+                </div>
             </div>
             <div className="filter-footer">
                 <button className="btn apply-btn" onClick={onApply}>

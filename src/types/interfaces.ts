@@ -31,6 +31,8 @@ export interface PromptDetailProps {
     promptContent: string;
     history?: PromptHistoryItem[];
     onEdit: () => void;
+    onDelete: (promptId: string) => void;
+    selectedPrompt: Prompt;
 }
 
 export interface PromptHistoryItem {

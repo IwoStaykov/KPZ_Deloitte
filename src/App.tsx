@@ -5,6 +5,7 @@ import { filterPrompts } from './utils/filterUtils';
 import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
+//import type { Prompt as PromptType } from './types/interfaces';
 import { useUserSub } from './hooks/useUserSub'; 
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
@@ -14,6 +15,7 @@ import { SortDropdown } from './components/SortControls/SortDropdown';
 
 
 const client = generateClient<Schema>();
+//console.log("Amplify Config:", client.config);
 
 // Komponenty
 import PromptCard from './components/PromptCard';
@@ -29,7 +31,7 @@ import {
   FilterOptions,
   TeamMember,
   SidebarCategory,
-  PromptHistoryItem
+  //PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {
@@ -270,6 +272,44 @@ const App: React.FC = () => {
         }
     }, []);
 
+    useEffect(() => {
+        // Automatyczna aktualizacja filtrów gdy zmieniają się dane
+        applyFilters();
+    }, [fetchedPrompts]);
+
+    //const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
+    //setFilteredPrompts(results);
+
+    useEffect(() => {
+        // Ten useEffect synchronizuje selectedPrompt z aktualną listą fetchedPrompts
+        if (selectedPrompt && fetchedPrompts.length > 0) {
+            // Znajdź zaktualizowaną wersję wybranego promptu na liście
+            const updatedVersionInList = fetchedPrompts.find(p => String(p.id) === String(selectedPrompt.id));
+    
+            if (updatedVersionInList) {
+                // Sprawdź, czy dane faktycznie się zmieniły, aby uniknąć niepotrzebnych re-renderów
+                // (proste porównanie stringów JSON, można użyć głębszego porównania, jeśli potrzebne)
+                if (JSON.stringify(selectedPrompt) !== JSON.stringify(updatedVersionInList)) {
+                    console.log('Aktualizowanie selectedPrompt z fetchedPrompts...');
+                    setSelectedPrompt(updatedVersionInList);
+                }
+            } else {
+                // Opcjonalnie: Obsłuż przypadek, gdy wybrany prompt został usunięty z listy
+                console.log('Wybrany prompt nie znaleziony na liście, być może został usunięty.');
+                setSelectedPrompt(null);
+                setIsPromptDetailOpen(false);
+            }
+        }
+        // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
+    }, [fetchedPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
+    
+    useEffect(() => {
+        if (selectedPrompt) {
+            const updatedPrompt = allPrompts.find(p => p.id === selectedPrompt.id);
+            if (updatedPrompt) setSelectedPrompt(updatedPrompt);
+        }
+    }, [allPrompts]);
+
     // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -434,20 +474,91 @@ const App: React.FC = () => {
         }
     };
 
-// Obsługa zapisania zmian w promptcie
-    const handleSaveEditedPrompt = (updatedPrompt: Prompt) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API do aktualizacji promptu
-        console.log('Aktualizacja promptu:', updatedPrompt);
-        alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
-
-
-        // Aktualizujemy wybrany prompt
-        setSelectedPrompt(updatedPrompt);
-
-        // Zamykamy okno edycji i otwieramy ponownie podgląd
-        setIsEditPromptOpen(false);
-        setIsPromptDetailOpen(true);
+    const handleSaveEditedPrompt = async (editedPromptData: any) => {
+        if (!editingPrompt) return;
+    
+        console.log("Rozpoczynanie zapisu edycji (App.tsx)...", editedPromptData); // Dodaj log tutaj
+    
+        try {
+            let tagsArray = [];
+            if (editedPromptData.tags) {
+                tagsArray = typeof editedPromptData.tags === 'string' 
+                    ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) 
+                    : [...editedPromptData.tags];
+            } else {
+                // Zachowaj istniejące tagi jeśli nie ma nowych
+                tagsArray = [...editingPrompt.tags];
+            }
+    
+            const updateData = {
+                id: String(editingPrompt.id),
+                title: editedPromptData.title,
+                description: editedPromptData.description,
+                content: editedPromptData.promptContent,
+                tags: tagsArray,
+                lastModifiedDate: new Date().toISOString(),
+            };
+    
+            console.log("Dane do wysłania (update):", updateData);
+    
+            const { data: updatedPrompt, errors } = await client.models.Prompt.update(updateData);
+            
+            console.log("Odpowiedź z Amplify update:", { updatedPrompt, errors });
+    
+            if (errors) {
+                console.error("BŁĘDY zwrócone przez Amplify update:", errors);
+                setError("Nie udało się zapisać zmian w promcie.");
+                return;
+            }
+    
+            console.log("Prompt zaktualizowany pomyślnie (bez błędów w odpowiedzi Amplify):", updatedPrompt);
+    
+            alert("Zmiany w prompcie zostały pomyślnie zapisane!");
+    
+            setIsEditPromptOpen(false);
+            setIsPromptDetailOpen(true);
+    
+    
+        } catch (error) {
+            console.error("Nieoczekiwany błąd CATCH podczas zapisywania edytowanego promptu:", error);
+            setError("Wystąpił nieoczekiwany błąd podczas zapisywania zmian.");
+        }
     };
+    
+    const handleDeletePrompt = async (promptId: string) => {
+        if (window.confirm('Czy na pewno chcesz usunąć ten prompt? Operacja jest nieodwracalna.')) {
+            try {
+                await client.models.Prompt.delete({ id: promptId });
+                setFetchedPrompts(prev => prev.filter(p => p.id !== promptId));
+                setIsPromptDetailOpen(false);
+                alert('Prompt został pomyślnie usunięty!');
+            } catch (error) {
+                console.error('Błąd podczas usuwania:', error);
+                alert('Wystąpił błąd podczas usuwania promptu');
+            }
+        }
+    };
+
+    // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
+    // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
+    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => ({
+        id: amplifyData.id,
+        title: amplifyData.title,
+        description: amplifyData.description || '',
+        tags: amplifyData.tags?.filter(Boolean) || [],
+        author: amplifyData.authorId,
+        date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(),
+        usageCount: 0,
+        promptContent: amplifyData.content || amplifyData.promptContent || '',
+        history: amplifyData.versions?.map((v: any) => ({
+            version: parseInt(v.versionNumber, 10),
+            date: new Date(v.creationDate).toLocaleDateString(),
+            changes: "Edycja",
+            content: v.content
+        })) || []
+    });
+  
+  
 
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
@@ -734,6 +845,8 @@ const App: React.FC = () => {
                         promptContent={selectedPrompt.promptContent}
                         history={selectedPrompt.history}
                         onEdit={handleEditPrompt}
+                        onDelete={handleDeletePrompt}
+                        selectedPrompt={selectedPrompt}
                     />
                 ) : (
                     <div className="content-container">
@@ -967,7 +1080,7 @@ const App: React.FC = () => {
                     isOpen={isEditPromptOpen}
                     onClose={() => {
                         setIsEditPromptOpen(false);
-                        setIsPromptDetailOpen(true); // Powrót do podglądu po anulowaniu
+                        setIsPromptDetailOpen(true);
                     }}
                     prompt={editingPrompt}
                     onSave={handleSaveEditedPrompt}
@@ -976,14 +1089,14 @@ const App: React.FC = () => {
 
             {/* Dodanie modalu zespołu do renderowania */}
             {isTeamModalOpen && (
-                <TeamModal
-                    isOpen={isTeamModalOpen}
-                    onClose={handleCloseTeamModal}
-                    members={teamMembers}
-                    currentUserRole={currentUserRole}
-                    teamPrompts={teamPrompts}
-                />
-            )}
+            <TeamModal
+                isOpen={isTeamModalOpen}
+                onClose={handleCloseTeamModal}
+                members={teamMembers}
+                teamPrompts={teamPrompts}
+                currentUserRole={currentUserRole}
+            />
+        )}
         </div>
     );
 };

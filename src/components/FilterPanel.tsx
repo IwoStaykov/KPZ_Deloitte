@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface FilterPanelProps {
     filters: {
@@ -14,6 +14,39 @@ interface FilterPanelProps {
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, isVisible }) => {
+    const [localFilters, setLocalFilters] = useState({
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo
+    });
+
+    useEffect(() => {
+        setLocalFilters({
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo
+        });
+    }, [filters]);
+
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setLocalFilters(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleApply = () => {
+        // Aktualizuj główne filtry przed zastosowaniem
+        const queryInput = document.getElementById('filter-query') as HTMLInputElement;
+        const authorInput = document.getElementById('filter-author') as HTMLInputElement;
+        const tagInput = document.getElementById('filter-tag') as HTMLInputElement;
+        
+        if (queryInput) queryInput.value = queryInput.value || '';
+        if (authorInput) authorInput.value = authorInput.value || '';
+        if (tagInput) tagInput.value = tagInput.value || '';
+        
+        onApply();
+    };
+
     if (!isVisible) return null;
 
     return (
@@ -65,8 +98,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                         id="filter-dateFrom"
                         name="dateFrom"
                         className="form-control"
-                        defaultValue={filters.dateFrom}
-                        max={filters.dateTo || undefined} // Ogranicza dateFrom do dateTo jeśli istnieje
+                        value={localFilters.dateFrom}
+                        onChange={handleDateChange}
+                        max={localFilters.dateTo || undefined}
                     />
                 </div>
                 <div className="filter-group">
@@ -76,13 +110,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                         id="filter-dateTo"
                         name="dateTo"
                         className="form-control"
-                        defaultValue={filters.dateTo}
-                        min={filters.dateFrom || undefined} // Ogranicza dateTo do dateFrom jeśli istnieje
+                        value={localFilters.dateTo}
+                        onChange={handleDateChange}
+                        min={localFilters.dateFrom || undefined}
                     />
                 </div>
             </div>
             <div className="filter-footer">
-                <button className="btn apply-btn" onClick={onApply}>
+                <button className="btn apply-btn" onClick={handleApply}>
                     <i className="bi bi-check-circle"></i> Zastosuj filtry
                 </button>
             </div>

@@ -1,4 +1,4 @@
-# KPZ_Deloitte – Aplikacja do zarządzania promptami
+# KPZ_Deloitte – Aplikacja do zarządzania promptami (DeloiHub)
 Hakerzy nie kodują, piszą prompty.
 Aplikacja umożliwia tworzenie, wersjonowanie i współdzielenie promptów w środowisku chmurowym. Projekt został zbudowany z wykorzystaniem React + Vite oraz AWS Amplify, co zapewnia skalowalność i łatwość wdrożenia.
 

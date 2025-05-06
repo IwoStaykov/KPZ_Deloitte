@@ -8,6 +8,9 @@ import { generateClient } from 'aws-amplify/data'
 import { useUserSub } from './hooks/useUserSub'; 
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
+import { useSort } from './hooks/useSort';
+import { SortButton} from './components/SortControls/SortButton';
+import { SortDropdown } from './components/SortControls/SortDropdown';
 
 
 const client = generateClient<Schema>();
@@ -70,19 +73,22 @@ const App: React.FC = () => {
     const { signOut} = useAuthenticator();
     const { sub: userSub} = useUserSub();
 
-
     const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
     const [currentPage, setCurrentPage] = useState(0);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState<number>(10); 
+
     
+    const { sortOption, handleSortChange, sortPrompts } = useSort();
+
     const filteredPrompts = useMemo(() => {
-        return filterPrompts(allPrompts, searchFilters, selectedCategory);
-    }, [allPrompts, searchFilters, selectedCategory]);
+        const filtered = filterPrompts(allPrompts, searchFilters, selectedCategory);
+        return sortPrompts(filtered);
+      }, [allPrompts, searchFilters, selectedCategory, sortOption]);
     
     const displayedPrompts = useMemo(() => {
-        const startIdx = currentPage * PAGE_SIZE;
-        return filteredPrompts.slice(startIdx, startIdx + PAGE_SIZE);
-    }, [filteredPrompts, currentPage]);
+        const startIdx = currentPage * pageSize;
+        return filteredPrompts.slice(startIdx, startIdx + pageSize);
+    }, [filteredPrompts, currentPage, pageSize]);
     
     const totalFilteredCount = filteredPrompts.length;
     
@@ -114,7 +120,7 @@ const App: React.FC = () => {
         };
     }, [isFilterPanelVisible]);
 
-   
+
 
 
     const [newPrompt, setNewPrompt] = useState<{
@@ -362,12 +368,6 @@ const App: React.FC = () => {
         setIsPromptDetailOpen(true);
     };
 
-    // Obsługa menu profilu - poprawiona wersja
-    const toggleProfileMenu = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Zatrzymujemy propagację wydarzenia
-        setIsProfileMenuOpen(prev => !prev);
-    };
-
 
 
     // Obsługa otwierania formularza nowego promptu
@@ -514,6 +514,7 @@ const App: React.FC = () => {
       
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
+        setCurrentPage(0);
       
         if (options.closePanel) {
           setIsFilterPanelVisible(false);
@@ -557,10 +558,6 @@ const App: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isCreatePromptOpen, isEditPromptOpen, isTeamModalOpen]);
 
-    const handleCategoryChange = (category: string) => {
-        // Użyj uniwersalnej funkcji filtrowania
-        applyFilters({ category });
-    };
 
     // Efekt do inicjalizacji filtrowanych promptów przy pierwszym renderowaniu
     useEffect(() => {
@@ -576,7 +573,6 @@ const App: React.FC = () => {
 
     const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const query = e.target.value;
-
         // Użyj uniwersalnej funkcji filtrowania
         applyFilters({ query });
     };
@@ -688,36 +684,38 @@ const App: React.FC = () => {
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
                         {/* Poprawiony komponent menu profilu */}
-                        <div className="profile-menu-container">
+                        <div className="dropdown">
                             <img
                                 src="https://via.placeholder.com/40"
                                 alt="Profile"
-                                className="profile-img"
-                                onClick={toggleProfileMenu}
+                                className="profile-img dropdown-toggle"
+                                role="button"
+                                id="dropdownMenuButton"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
                             />
-                            {isProfileMenuOpen && (
-                                <div className="profile-dropdown">
-                                    <div className="dropdown-menu">
-                                        <a href="#" className="dropdown-item">
-                                            <i className="bi bi-person me-2"></i>
-                                            Profil
-                                        </a>
-                                        <a href="#" className="dropdown-item">
-                                            <i className="bi bi-sliders me-2"></i>
-                                            Preferencje
-                                        </a>
-                                        <button
-                                            onClick={signOut}
-                                            className="dropdown-item logout-btn"
-                                            aria-label="Wyloguj"
-                                            title="Wyloguj"
-                                        >
-                                            <i className="bi bi-box-arrow-right me-2"></i>
-                                            Wyloguj
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                            <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                                <li>
+                                <a className="dropdown-item" href="#">
+                                    <i className="bi bi-person me-2"></i> Profil
+                                </a>
+                                </li>
+                                <li>
+                                <a className="dropdown-item" href="#">
+                                    <i className="bi bi-sliders me-2"></i> Preferencje
+                                </a>
+                                </li>
+                                <li>
+                                <button
+                                    className="dropdown-item"
+                                    onClick={signOut}
+                                    aria-label="Wyloguj"
+                                    title="Wyloguj"
+                                >
+                                    <i className="bi bi-box-arrow-right me-2"></i> Wyloguj
+                                </button>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -789,34 +787,21 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <div>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'All' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('All')}
-                                >
-                                    All
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'Writing' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Writing')}
-                                >
-                                    Writing
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'Programming' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Programming')}
-                                >
-                                    Programming
-                                </button>
-                                <button
-                                    className={`btn category-btn ${selectedCategory === 'Design' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Design')}
-                                >
-                                    Design
-                                </button>
+                            <div className="sort-controls">
+                                <div className="dropdown">
+                                    <SortButton 
+                                    currentSort={sortOption} 
+                                    onClick={() => {}} 
+                                    />
+                                    <SortDropdown 
+                                    onSortChange={(option) => {
+                                        handleSortChange(option);
+                                    }} 
+                                    currentSort={sortOption} 
+                                    />
+                                </div>
                             </div>
                         </div>
-
                         <div className="row g-4">
                             {filteredPrompts.length > 0 ? (
                                 <>
@@ -833,19 +818,44 @@ const App: React.FC = () => {
                                     </div>
                                 ))}
                                 
-                                <div className="col-12 mt-4">
-                                    <Pagination
-                                        currentPage={currentPage + 1}
-                                        totalPages={Math.ceil(totalFilteredCount / PAGE_SIZE)}
-                                        onNext={() => setCurrentPage(prev => prev + 1)}
-                                        onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                        onChange={(newPageIndex?: number) => {
-                                            if (newPageIndex !== undefined) {
-                                            setCurrentPage(newPageIndex - 1); // Konwersja z 1-based
-                                            }
-                                        }}
-                                        siblingCount={1}
-                                    />
+                                <div className="col-12 mt-4 position-relative">
+                                    {/* Paginacja - wyśrodkowana */}
+                                    <div className="d-flex justify-content-center">
+                                        <Pagination
+                                            currentPage={currentPage + 1}
+                                            totalPages={Math.ceil(totalFilteredCount / pageSize)}
+                                            onNext={() => setCurrentPage(prev => prev + 1)}
+                                            onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                            onChange={(newPageIndex?: number) => {
+                                                if (newPageIndex !== undefined) {
+                                                    setCurrentPage(newPageIndex - 1);
+                                                }
+                                            }}
+                                            siblingCount={1}
+                                        />
+                                    </div>
+                                    
+                                    {/* Selektor - w prawym rogu */}
+                                    <div className="position-absolute end-0 top-0">
+                                        <div className="page-size-selector d-flex align-items-center">
+                                            <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                            <select 
+                                                id="page-size"
+                                                className="form-select form-select-sm"
+                                                value={pageSize}
+                                                onChange={(e) => {
+                                                    setPageSize(Number(e.target.value));
+                                                    setCurrentPage(0);
+                                                }}
+                                                style={{width: 'auto'}}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 </>
                             ) : (

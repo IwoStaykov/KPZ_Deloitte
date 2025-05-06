@@ -1421,3 +1421,53 @@ input:checked + .toggle-slider:before {
         opacity: 0.5;
     }
 }
+
+  .sort-controls {
+    margin-left: auto;
+  }
+  
+  .dropdown-toggle {
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+  }
+  
+  .dropdown-item.active {
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+  }
+  
+  .dropdown-item .bi {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+  }
+ 
+  .page-size-selector {
+    display: flex;
+    align-items: center;
+}
+
+.page-size-selector select {
+    margin-left: 0.5rem;
+    display: inline-block;
+    width: auto;
+}
+
+/* Dla responsywności */
+@media (max-width: 768px) {
+    .col-12.mt-4.d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .page-size-selector {
+        margin-bottom: 1rem;
+    }
+}

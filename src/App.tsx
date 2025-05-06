@@ -31,7 +31,7 @@ import {
   FilterOptions,
   TeamMember,
   SidebarCategory,
-  //PromptHistoryItem
+  PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {
@@ -273,19 +273,10 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // Automatyczna aktualizacja filtrów gdy zmieniają się dane
-        applyFilters();
-    }, [fetchedPrompts]);
-
-    //const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
-    //setFilteredPrompts(results);
-
-    useEffect(() => {
         // Ten useEffect synchronizuje selectedPrompt z aktualną listą fetchedPrompts
-        if (selectedPrompt && fetchedPrompts.length > 0) {
+        if (selectedPrompt && allPrompts.length > 0) {
             // Znajdź zaktualizowaną wersję wybranego promptu na liście
-            const updatedVersionInList = fetchedPrompts.find(p => String(p.id) === String(selectedPrompt.id));
-    
+            const updatedVersionInList = allPrompts.find(p => String(p.id) === String(selectedPrompt.id));
             if (updatedVersionInList) {
                 // Sprawdź, czy dane faktycznie się zmieniły, aby uniknąć niepotrzebnych re-renderów
                 // (proste porównanie stringów JSON, można użyć głębszego porównania, jeśli potrzebne)
@@ -301,7 +292,7 @@ const App: React.FC = () => {
             }
         }
         // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
-    }, [fetchedPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
+    }, [allPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
     
     useEffect(() => {
         if (selectedPrompt) {
@@ -526,15 +517,15 @@ const App: React.FC = () => {
     };
     
     const handleDeletePrompt = async (promptId: string) => {
-        if (window.confirm('Czy na pewno chcesz usunąć ten prompt? Operacja jest nieodwracalna.')) {
+        if (window.confirm('Czy na pewno chcesz usunąć ten prompt?')) {
             try {
                 await client.models.Prompt.delete({ id: promptId });
-                setFetchedPrompts(prev => prev.filter(p => p.id !== promptId));
+                setAllPrompts(prev => prev.filter(p => p.id !== promptId));
                 setIsPromptDetailOpen(false);
-                alert('Prompt został pomyślnie usunięty!');
+                alert('Prompt usunięty!');
             } catch (error) {
-                console.error('Błąd podczas usuwania:', error);
-                alert('Wystąpił błąd podczas usuwania promptu');
+                console.error('Błąd usuwania:', error);
+                alert('Błąd podczas usuwania');
             }
         }
     };

@@ -530,27 +530,6 @@ const App: React.FC = () => {
         }
     };
 
-    // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
-    // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
-    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => ({
-        id: amplifyData.id,
-        title: amplifyData.title,
-        description: amplifyData.description || '',
-        tags: amplifyData.tags?.filter(Boolean) || [],
-        author: amplifyData.authorId,
-        date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(),
-        usageCount: 0,
-        promptContent: amplifyData.content || amplifyData.promptContent || '',
-        history: amplifyData.versions?.map((v: any) => ({
-            version: parseInt(v.versionNumber, 10),
-            date: new Date(v.creationDate).toLocaleDateString(),
-            changes: "Edycja",
-            content: v.content
-        })) || []
-    });
-  
-  
-
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
         setIsTeamModalOpen(false);

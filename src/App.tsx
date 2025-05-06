@@ -59,12 +59,14 @@ const App: React.FC = () => {
         query: string;
         author: string;
         tag: string;
-        date: string;
+        dateFrom: string;
+        dateTo: string;
     }>({
         query: '',
         author: '',
         tag: '',
-        date: ''
+        dateFrom: '',
+        dateTo: ''
     });
 
     // Stan dla widoczności panelu filtrów
@@ -77,7 +79,8 @@ const App: React.FC = () => {
 
     const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
     const [currentPage, setCurrentPage] = useState(0);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState<number>(10); 
+
     
     const { sortOption, handleSortChange, sortPrompts } = useSort();
 
@@ -87,9 +90,9 @@ const App: React.FC = () => {
       }, [allPrompts, searchFilters, selectedCategory, sortOption]);
     
     const displayedPrompts = useMemo(() => {
-        const startIdx = currentPage * PAGE_SIZE;
-        return filteredPrompts.slice(startIdx, startIdx + PAGE_SIZE);
-    }, [filteredPrompts, currentPage]);
+        const startIdx = currentPage * pageSize;
+        return filteredPrompts.slice(startIdx, startIdx + pageSize);
+    }, [filteredPrompts, currentPage, pageSize]);
     
     const totalFilteredCount = filteredPrompts.length;
     
@@ -225,18 +228,19 @@ const App: React.FC = () => {
 
                     const history: PromptHistoryItem[] = sortedVersions.map(v => ({
                         version: parseInt(v.versionNumber),
-                        date: new Date(v.creationDate).toLocaleDateString(),
+                        date: new Date(p.lastModifiedDate).toISOString(),
                         changes: `Version ${v.versionNumber}`,
                         content: v.content
                     }));
-
+                    
+                     
                     return {
                         id: id,
                         title: p.title,
                         description: p.description || '',
                         tags: p.tags?.filter(Boolean) || [],
                         author: p.authorName,
-                        date: new Date(p.lastModifiedDate).toLocaleDateString(),
+                        date: new Date(p.lastModifiedDate).toISOString(),
                         usageCount: 0,
                         promptContent: p.content,
                         history: history.length > 0 ? history : undefined
@@ -325,6 +329,7 @@ const App: React.FC = () => {
         };
     }, [isProfileMenuOpen]);
 
+    
     // Efekt inicjalizujący dane zespołu
     useEffect(() => {
         // W wersji produkcyjnej tutaj byłoby pobieranie danych z API
@@ -561,47 +566,42 @@ const App: React.FC = () => {
 
 // Zbierz wartości z pól formularza i zastosuj filtry
     const collectAndApplyFilters = () => {
-        // Zbierz wartości z pól formularza
         const query = (document.getElementById('filter-query') as HTMLInputElement)?.value || '';
         const author = (document.getElementById('filter-author') as HTMLInputElement)?.value || '';
         const tag = (document.getElementById('filter-tag') as HTMLInputElement)?.value || '';
-        const date = (document.getElementById('filter-date') as HTMLInputElement)?.value || '';
+        const dateFrom = (document.getElementById('filter-dateFrom') as HTMLInputElement)?.value || '';
+        const dateTo = (document.getElementById('filter-dateTo') as HTMLInputElement)?.value || '';
 
-        // Przygotuj nowy obiekt filtrów
         const newFilters = {
             query,
             author,
             tag,
-            date
+            dateFrom,
+            dateTo
         };
 
-        // Aktualizuj stan i zastosuj filtry
         setSearchFilters(newFilters);
         applyFilters({ ...newFilters, closePanel: true });
-
-        // Reset paginacji przy nowych filtrach
         setCurrentPage(0);
     };
 
 // Obsługa resetowania filtrów
     const resetFilters = () => {
-        // Resetujemy wartość wszystkich pól
-        ['filter-query', 'filter-author', 'filter-tag', 'filter-date'].forEach(id => {
+        ['filter-query', 'filter-author', 'filter-tag', 'filter-dateFrom', 'filter-dateTo'].forEach(id => {
             const input = document.getElementById(id) as HTMLInputElement;
             if (input) input.value = '';
         });
 
-        // Resetujemy wartość pola wyszukiwania w nagłówku
         if (searchInputRef.current) {
             searchInputRef.current.value = '';
         }
 
-        // Używamy uniwersalnej funkcji filtrowania z pustymi wartościami
         applyFilters({
             query: '',
             author: '',
             tag: '',
-            date: '',
+            dateFrom: '',
+            dateTo: '',
             closePanel: true
         });
     };
@@ -611,14 +611,16 @@ const App: React.FC = () => {
         const filterQuery = options.query !== undefined ? options.query : searchFilters.query;
         const filterAuthor = options.author !== undefined ? options.author : searchFilters.author;
         const filterTag = options.tag !== undefined ? options.tag : searchFilters.tag;
-        const filterDate = options.date !== undefined ? options.date : searchFilters.date;
+        const filterDateFrom = options.dateFrom !== undefined ? options.dateFrom : searchFilters.dateFrom;
+        const filterDateTo = options.dateTo !== undefined ? options.dateTo : searchFilters.dateTo;
         const filterCategory = options.category !== undefined ? options.category : selectedCategory;
       
         const updatedFilters = {
-          query: filterQuery,
-          author: filterAuthor,
-          tag: filterTag,
-          date: filterDate
+            query: filterQuery,
+            author: filterAuthor,
+            tag: filterTag,
+            dateFrom: filterDateFrom,
+            dateTo: filterDateTo
         };
       
 
@@ -631,10 +633,9 @@ const App: React.FC = () => {
         setCurrentPage(0);
       
         if (options.closePanel) {
-          setIsFilterPanelVisible(false);
+            setIsFilterPanelVisible(false);
         }
     };
-      
 
     useEffect(() => {
         const handleClickOutsideModals = (event: MouseEvent) => {
@@ -862,7 +863,7 @@ const App: React.FC = () => {
 
                                 {/* Wskaźniki aktywnych filtrów */}
                                 {/* Wskaźniki aktywnych filtrów */}
-                                {(searchFilters.author || searchFilters.tag || searchFilters.date) && (
+                                {(searchFilters.author || searchFilters.tag || searchFilters.dateFrom || searchFilters.dateTo) && (
                                     <div className="active-filters ms-3">
                                         {searchFilters.author && (
                                             <span className="filter-badge">
@@ -888,12 +889,12 @@ const App: React.FC = () => {
             </span>
                                         )}
 
-                                        {searchFilters.date && (
+                                        {(searchFilters.dateFrom || searchFilters.dateTo) && (
                                             <span className="filter-badge">
-                Data: {searchFilters.date}
+                Data: {searchFilters.dateFrom} - {searchFilters.dateTo}
                                                 <button
                                                     className="clear-filter-btn"
-                                                    onClick={() => applyFilters({ date: '' })}
+                                                    onClick={() => applyFilters({ dateFrom: '', dateTo: '' })}
                                                 >
                     <i className="bi bi-x"></i>
                 </button>
@@ -929,24 +930,49 @@ const App: React.FC = () => {
                                         tags={prompt.tags}
                                         author={prompt.author}
                                         date={prompt.date}
-                                        onClick={() => handlePromptClick(prompt)}
+                                        onClick={() => handlePromptClick(prompt)}                              
                                     />
                                     </div>
                                 ))}
                                 
-                                <div className="col-12 mt-4">
-                                    <Pagination
-                                        currentPage={currentPage + 1}
-                                        totalPages={Math.ceil(totalFilteredCount / PAGE_SIZE)}
-                                        onNext={() => setCurrentPage(prev => prev + 1)}
-                                        onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                        onChange={(newPageIndex?: number) => {
-                                            if (newPageIndex !== undefined) {
-                                            setCurrentPage(newPageIndex - 1); // Konwersja z 1-based
-                                            }
-                                        }}
-                                        siblingCount={1}
-                                    />
+                                <div className="col-12 mt-4 position-relative">
+                                    {/* Paginacja - wyśrodkowana */}
+                                    <div className="d-flex justify-content-center">
+                                        <Pagination
+                                            currentPage={currentPage + 1}
+                                            totalPages={Math.ceil(totalFilteredCount / pageSize)}
+                                            onNext={() => setCurrentPage(prev => prev + 1)}
+                                            onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                            onChange={(newPageIndex?: number) => {
+                                                if (newPageIndex !== undefined) {
+                                                    setCurrentPage(newPageIndex - 1);
+                                                }
+                                            }}
+                                            siblingCount={1}
+                                        />
+                                    </div>
+                                    
+                                    {/* Selektor - w prawym rogu */}
+                                    <div className="position-absolute end-0 top-0">
+                                        <div className="page-size-selector d-flex align-items-center">
+                                            <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                            <select 
+                                                id="page-size"
+                                                className="form-select form-select-sm"
+                                                value={pageSize}
+                                                onChange={(e) => {
+                                                    setPageSize(Number(e.target.value));
+                                                    setCurrentPage(0);
+                                                }}
+                                                style={{width: 'auto'}}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 </>
                             ) : (
@@ -963,7 +989,8 @@ const App: React.FC = () => {
                                                 query: '',
                                                 author: '',
                                                 tag: '',
-                                                date: '',
+                                                dateTo: '',
+                                                dateFrom: '',
                                                 category: 'All'
                                             });
                                         }}>

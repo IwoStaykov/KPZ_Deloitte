@@ -22,6 +22,7 @@ import EditPrompt from './components/EditPrompt';
 import FilterPanel from './components/FilterPanel';
 import TeamModal from './components/TeamModal';
 import SortMenu from './components/SortMenu';
+import ProfileMenu from './components/ProfileMenu';
 
 
 // Typy
@@ -296,26 +297,26 @@ const App: React.FC = () => {
         }
     }, [allPrompts]);
 
-    // Obsługa kliknięcia poza menu profilu
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node | null;
-            if (!target) return;
+    // // Obsługa kliknięcia poza menu profilu
+    // useEffect(() => {
+    //     const handleClickOutside = (event: MouseEvent) => {
+    //         const target = event.target as Node | null;
+    //         if (!target) return;
 
-            const profileMenuContainer = document.querySelector('.profile-menu-container');
-            if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
-                setIsProfileMenuOpen(false);
-            }
-        };
+    //         const profileMenuContainer = document.querySelector('.profile-menu-container');
+    //         if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
+    //             setIsProfileMenuOpen(false);
+    //         }
+    //     };
 
-        if (isProfileMenuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
+    //     if (isProfileMenuOpen) {
+    //         document.addEventListener('mousedown', handleClickOutside);
+    //     }
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isProfileMenuOpen]);
+    //     return () => {
+    //         document.removeEventListener('mousedown', handleClickOutside);
+    //     };
+    // }, [isProfileMenuOpen]);
 
     // Efekt inicjalizujący dane zespołu
     useEffect(() => {
@@ -670,7 +671,7 @@ const App: React.FC = () => {
             {/* Sidebar */}
             <div className={sidebarClasses}>
                 <div className="sidebar-header">
-                    <h3>BETA</h3>
+                    <h3>DeloiHub</h3>
                     <div className="toggle-sidebar" onClick={toggleSidebar}>
                         <i className="bi bi-chevron-left"></i>
                     </div>
@@ -713,7 +714,7 @@ const App: React.FC = () => {
             <div className={`main-content ${isSidebarVisible ? 'with-sidebar' : ''}`}>
                 <div className="header">
                     {!isSidebarVisible && (
-                        <div className="sidebar-logo" onClick={handleLogoClick}>BETA</div>
+                        <div className="sidebar-logo" onClick={handleLogoClick}>DeloiHub</div>
                     )}
                     <div className="search-container">
                         <i className="bi bi-search search-icon"></i>
@@ -761,40 +762,9 @@ const App: React.FC = () => {
                         <button className="btn create-prompt-btn" onClick={openCreatePrompt}>
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
-                        {/* Poprawiony komponent menu profilu */}
-                        <div className="dropdown">
-                            <img
-                                src="https://via.placeholder.com/40"
-                                alt="Profile"
-                                className="profile-img dropdown-toggle"
-                                role="button"
-                                id="dropdownMenuButton"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                            />
-                            <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                                <li>
-                                <a className="dropdown-item" href="#">
-                                    <i className="bi bi-person me-2"></i> Profil
-                                </a>
-                                </li>
-                                <li>
-                                <a className="dropdown-item" href="#">
-                                    <i className="bi bi-sliders me-2"></i> Preferencje
-                                </a>
-                                </li>
-                                <li>
-                                <button
-                                    className="dropdown-item"
-                                    onClick={signOut}
-                                    aria-label="Wyloguj"
-                                    title="Wyloguj"
-                                >
-                                    <i className="bi bi-box-arrow-right me-2"></i> Wyloguj
-                                </button>
-                                </li>
-                            </ul>
-                        </div>
+
+                        {/* Przycisk do otwierania menu profilu */}
+                        <ProfileMenu signOut={signOut} />
                     </div>
                 </div>
 

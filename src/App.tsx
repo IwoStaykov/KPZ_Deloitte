@@ -45,7 +45,6 @@ const App: React.FC = () => {
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
     const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
     const [isEditPromptOpen, setIsEditPromptOpen] = useState<boolean>(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('All');

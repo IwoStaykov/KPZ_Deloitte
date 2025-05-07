@@ -31,7 +31,7 @@ import {
   FilterOptions,
   TeamMember,
   SidebarCategory,
-  //PromptHistoryItem
+  PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {
@@ -195,7 +195,7 @@ const App: React.FC = () => {
         }
     ];
 
-
+    // Pobieranie promptów z bazy danych
     useEffect(() => {
         const subscription = client.models.Prompt.observeQuery({
             selectionSet: [
@@ -255,7 +255,6 @@ const App: React.FC = () => {
         return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
     }, []); 
 
-
     
       
     
@@ -270,16 +269,10 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // Automatyczna aktualizacja filtrów gdy zmieniają się dane
-        applyFilters();
-    }, [fetchedPrompts]);
-
-    useEffect(() => {
         // Ten useEffect synchronizuje selectedPrompt z aktualną listą fetchedPrompts
-        if (selectedPrompt && fetchedPrompts.length > 0) {
+        if (selectedPrompt && allPrompts.length > 0) {
             // Znajdź zaktualizowaną wersję wybranego promptu na liście
-            const updatedVersionInList = fetchedPrompts.find(p => String(p.id) === String(selectedPrompt.id));
-    
+            const updatedVersionInList = allPrompts.find(p => String(p.id) === String(selectedPrompt.id));
             if (updatedVersionInList) {
                 // Sprawdź, czy dane faktycznie się zmieniły, aby uniknąć niepotrzebnych re-renderów
                 // (proste porównanie stringów JSON, można użyć głębszego porównania, jeśli potrzebne)
@@ -295,14 +288,14 @@ const App: React.FC = () => {
             }
         }
         // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
-    }, [fetchedPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
+    }, [allPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
     
     useEffect(() => {
         if (selectedPrompt) {
-            const updatedPrompt = fetchedPrompts.find(p => p.id === selectedPrompt.id);
+            const updatedPrompt = allPrompts.find(p => p.id === selectedPrompt.id);
             if (updatedPrompt) setSelectedPrompt(updatedPrompt);
         }
-    }, [fetchedPrompts]);
+    }, [allPrompts]);
 
     // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
@@ -467,7 +460,6 @@ const App: React.FC = () => {
         }
     };
 
-
     const handleSaveEditedPrompt = async (editedPromptData: any) => {
         if (!editingPrompt) return;
     
@@ -520,39 +512,18 @@ const App: React.FC = () => {
     };
     
     const handleDeletePrompt = async (promptId: string) => {
-        if (window.confirm('Czy na pewno chcesz usunąć ten prompt? Operacja jest nieodwracalna.')) {
+        if (window.confirm('Czy na pewno chcesz usunąć ten prompt?')) {
             try {
                 await client.models.Prompt.delete({ id: promptId });
-                setFetchedPrompts(prev => prev.filter(p => p.id !== promptId));
+                setAllPrompts(prev => prev.filter(p => p.id !== promptId));
                 setIsPromptDetailOpen(false);
-                alert('Prompt został pomyślnie usunięty!');
+                alert('Prompt usunięty!');
             } catch (error) {
-                console.error('Błąd podczas usuwania:', error);
-                alert('Wystąpił błąd podczas usuwania promptu');
+                console.error('Błąd usuwania:', error);
+                alert('Błąd podczas usuwania');
             }
         }
-
-
-    // ZAKTUALIZOWANA FUNKCJA POMOCNICZA DO TRANSFORMACJI
-    // Mapuje dane z Amplify (zgodne ze schematem) na interfejs 'Prompt' używany w stanie React
-    const transformAmplifyDataToPrompt = (amplifyData: any): Prompt => ({
-        id: amplifyData.id,
-        title: amplifyData.title,
-        description: amplifyData.description || '',
-        tags: amplifyData.tags?.filter(Boolean) || [],
-        author: amplifyData.authorId,
-        date: new Date(amplifyData.lastModifiedDate).toLocaleDateString(),
-        usageCount: 0,
-        promptContent: amplifyData.content || amplifyData.promptContent || '',
-        history: amplifyData.versions?.map((v: any) => ({
-            version: parseInt(v.versionNumber, 10),
-            date: new Date(v.creationDate).toLocaleDateString(),
-            changes: "Edycja",
-            content: v.content
-        })) || []
-    });
-  
-  
+    };
 
 // Obsługa zamknięcia modalu zespołu
     const handleCloseTeamModal = () => {
@@ -621,11 +592,6 @@ const App: React.FC = () => {
           date: filterDate
         };
       
-
-        // Zmiana źródła danych z filteredPrompts na fetchedPrompts
-        const results = filterPrompts(fetchedPrompts, updatedFilters, filterCategory);
-        setFilteredPrompts(results);
-      
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
         setCurrentPage(0);
@@ -634,7 +600,6 @@ const App: React.FC = () => {
           setIsFilterPanelVisible(false);
         }
     };
-      
 
     useEffect(() => {
         const handleClickOutsideModals = (event: MouseEvent) => {
@@ -673,7 +638,6 @@ const App: React.FC = () => {
     }, [isCreatePromptOpen, isEditPromptOpen, isTeamModalOpen]);
 
 
-
     // Efekt do inicjalizacji filtrowanych promptów przy pierwszym renderowaniu
     useEffect(() => {
         applyFilters();
@@ -685,6 +649,7 @@ const App: React.FC = () => {
         // Inicjalizacja filtrów przy pierwszym renderowaniu
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
     const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const query = e.target.value;
         // Użyj uniwersalnej funkcji filtrowania

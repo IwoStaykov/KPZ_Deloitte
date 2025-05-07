@@ -87,4 +87,15 @@ export interface FilterOptions {
     closePanel?: boolean;
 }
 
+export interface SortButtonProps {
+  currentSort: string;
+  onClick: (option: string) => void;
+}
+
+export interface SortDropdownProps {
+    currentSort: string;
+    onSortChange: (option: string) => void;
+}
+
+
 export type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc';

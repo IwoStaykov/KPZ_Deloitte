@@ -1441,6 +1441,48 @@ input:checked + .toggle-slider:before {
   .sort-controls {
     margin-left: auto;
   }
+
+  .sort-menu {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .sort-button {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .sort-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    list-style: none;
+    margin-top: 4px;
+    padding: 4px 0;
+    width: max-content;
+    min-width: 160px;
+  }
+  
+  .sort-dropdown li {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  
+  .sort-dropdown li:hover {
+    background-color: #f1f1f1;
+  }
   
   .dropdown-toggle {
     min-width: 160px;

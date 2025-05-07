@@ -10,8 +10,6 @@ import { useUserSub } from './hooks/useUserSub';
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
 import { useSort } from './hooks/useSort';
-import { SortButton} from './components/SortControls/SortButton';
-import { SortDropdown } from './components/SortControls/SortDropdown';
 
 
 const client = generateClient<Schema>();
@@ -23,6 +21,7 @@ import PromptDetail from './components/PromptDetail';
 import EditPrompt from './components/EditPrompt';
 import FilterPanel from './components/FilterPanel';
 import TeamModal from './components/TeamModal';
+import SortMenu from './components/SortMenu';
 
 
 // Typy
@@ -869,18 +868,10 @@ const App: React.FC = () => {
                             </div>
 
                             <div className="sort-controls">
-                                <div className="dropdown">
-                                    <SortButton 
+                                <SortMenu 
                                     currentSort={sortOption} 
-                                    onClick={() => {}} 
-                                    />
-                                    <SortDropdown 
-                                    onSortChange={(option) => {
-                                        handleSortChange(option);
-                                    }} 
-                                    currentSort={sortOption} 
-                                    />
-                                </div>
+                                    onSortChange={handleSortChange} 
+                                />
                             </div>
                         </div>
                         <div className="row g-4">

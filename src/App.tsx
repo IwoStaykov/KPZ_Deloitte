@@ -78,7 +78,7 @@ const App: React.FC = () => {
 
     const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
     const [currentPage, setCurrentPage] = useState(0);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState<number>(10);
     
     const { sortOption, handleSortChange, sortPrompts } = useSort();
 
@@ -88,9 +88,9 @@ const App: React.FC = () => {
       }, [allPrompts, searchFilters, selectedCategory, sortOption]);
     
     const displayedPrompts = useMemo(() => {
-        const startIdx = currentPage * PAGE_SIZE;
-        return filteredPrompts.slice(startIdx, startIdx + PAGE_SIZE);
-    }, [filteredPrompts, currentPage]);
+        const startIdx = currentPage * pageSize;
+        return filteredPrompts.slice(startIdx, startIdx + pageSize);
+    }, [filteredPrompts, currentPage, pageSize]);
     
     const totalFilteredCount = filteredPrompts.length;
     
@@ -865,19 +865,44 @@ const App: React.FC = () => {
                                     </div>
                                 ))}
                                 
-                                <div className="col-12 mt-4">
-                                    <Pagination
-                                        currentPage={currentPage + 1}
-                                        totalPages={Math.ceil(totalFilteredCount / PAGE_SIZE)}
-                                        onNext={() => setCurrentPage(prev => prev + 1)}
-                                        onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                        onChange={(newPageIndex?: number) => {
-                                            if (newPageIndex !== undefined) {
-                                            setCurrentPage(newPageIndex - 1); // Konwersja z 1-based
-                                            }
-                                        }}
-                                        siblingCount={1}
-                                    />
+                                <div className="col-12 mt-4 position-relative">
+                                    {/* Paginacja - wyśrodkowana */}
+                                    <div className="d-flex justify-content-center">
+                                        <Pagination
+                                            currentPage={currentPage + 1}
+                                            totalPages={Math.ceil(totalFilteredCount / pageSize)}
+                                            onNext={() => setCurrentPage(prev => prev + 1)}
+                                            onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                            onChange={(newPageIndex?: number) => {
+                                                if (newPageIndex !== undefined) {
+                                                    setCurrentPage(newPageIndex - 1);
+                                                }
+                                            }}
+                                            siblingCount={1}
+                                        />
+                                    </div>
+                                    
+                                    {/* Selektor - w prawym rogu */}
+                                    <div className="position-absolute end-0 top-0">
+                                        <div className="page-size-selector d-flex align-items-center">
+                                            <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                            <select 
+                                                id="page-size"
+                                                className="form-select form-select-sm"
+                                                value={pageSize}
+                                                onChange={(e) => {
+                                                    setPageSize(Number(e.target.value));
+                                                    setCurrentPage(0);
+                                                }}
+                                                style={{width: 'auto'}}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 </>
                             ) : (

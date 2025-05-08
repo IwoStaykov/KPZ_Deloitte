@@ -1516,3 +1516,27 @@ input:checked + .toggle-slider:before {
     font-size: 1.1rem;
     margin-right: 0.5rem;
   }
+
+/* Paginacja */
+  .page-size-selector {
+    display: flex;
+    align-items: center;
+}
+
+.page-size-selector select {
+    margin-left: 0.5rem;
+    display: inline-block;
+    width: auto;
+}
+
+/* Dla responsywności */
+@media (max-width: 768px) {
+    .col-12.mt-4.d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .page-size-selector {
+        margin-bottom: 1rem;
+    }
+}

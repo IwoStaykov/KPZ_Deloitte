@@ -785,7 +785,7 @@ const App: React.FC = () => {
                         date={selectedPrompt.date}
                         usageCount={selectedPrompt.usageCount}
                         promptContent={selectedPrompt.promptContent}
-                        history={selectedPrompt.history}
+                        history={selectedPrompt.history || []}
                         onEdit={handleEditPrompt}
                         onDelete={handleDeletePrompt}
                         selectedPrompt={selectedPrompt}

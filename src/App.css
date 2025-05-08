@@ -514,6 +514,7 @@ button.dropdown-item:hover {
 /* Style dla historii promptów */
 .history-dropdown {
     position: relative;
+    display: inline-block;
 }
 
 .history-btn {

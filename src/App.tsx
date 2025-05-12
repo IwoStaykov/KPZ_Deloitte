@@ -471,6 +471,16 @@ const App: React.FC = () => {
       
           const now = new Date().toISOString();
       
+          // 0. Zapis oryginalnego promptu jako wersji 1
+          if (!editingPrompt.history || editingPrompt.history.length === 0) {
+            await client.models.Version.create({
+                content: editingPrompt.promptContent,
+                versionNumber: "1",
+                creationDate: new Date().toISOString(),
+                promptId: editingPrompt.id
+            });
+          }
+
           // 1. Aktualizacja głównego Prompt
           const updatedPromptResult = await client.models.Prompt.update({
             id: editingPrompt.id,
@@ -490,7 +500,7 @@ const App: React.FC = () => {
           }
       
           // 2. Tworzenie nowej wersji prompta
-          const versionNumber = String((editingPrompt.history?.length || 0) + 1);
+          const versionNumber = String((editingPrompt.history?.length || 1) + 1);
       
           const newVersionResult = await client.models.Version.create({
             promptId: updatedPrompt.id,

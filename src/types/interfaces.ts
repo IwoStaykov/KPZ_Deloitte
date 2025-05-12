@@ -31,6 +31,8 @@ export interface PromptDetailProps {
     promptContent: string;
     history?: PromptHistoryItem[];
     onEdit: () => void;
+    onDelete: (promptId: string) => void;
+    selectedPrompt: Prompt;
 }
 
 export interface PromptHistoryItem {
@@ -80,7 +82,21 @@ export interface FilterOptions {
     query?: string;
     author?: string;
     tag?: string;
-    date?: string;
+    dateFrom?: string;
+    dateTo?: string;
     category?: string;
     closePanel?: boolean;
 }
+
+export interface SortButtonProps {
+  currentSort: string;
+  onClick: (option: string) => void;
+}
+
+export interface SortDropdownProps {
+    currentSort: string;
+    onSortChange: (option: string) => void;
+}
+
+
+export type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc';

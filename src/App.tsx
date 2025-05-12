@@ -5,12 +5,15 @@ import { filterPrompts } from './utils/filterUtils';
 import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
+//import type { Prompt as PromptType } from './types/interfaces';
 import { useUserSub } from './hooks/useUserSub'; 
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
+import { useSort } from './hooks/useSort';
 
 
 const client = generateClient<Schema>();
+//console.log("Amplify Config:", client.config);
 
 // Komponenty
 import PromptCard from './components/PromptCard';
@@ -18,6 +21,8 @@ import PromptDetail from './components/PromptDetail';
 import EditPrompt from './components/EditPrompt';
 import FilterPanel from './components/FilterPanel';
 import TeamModal from './components/TeamModal';
+import SortMenu from './components/SortMenu';
+import ProfileMenu from './components/ProfileMenu';
 
 
 // Typy
@@ -40,7 +45,6 @@ const App: React.FC = () => {
     const [openCategoryIndex, setOpenCategoryIndex] = useState<number | null>(null);
     const [isPromptDetailOpen, setIsPromptDetailOpen] = useState<boolean>(false);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
     const [isCreatePromptOpen, setIsCreatePromptOpen] = useState<boolean>(false);
     const [isEditPromptOpen, setIsEditPromptOpen] = useState<boolean>(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -54,12 +58,14 @@ const App: React.FC = () => {
         query: string;
         author: string;
         tag: string;
-        date: string;
+        dateFrom: string;
+        dateTo: string;
     }>({
         query: '',
         author: '',
         tag: '',
-        date: ''
+        dateFrom: '',
+        dateTo: ''
     });
 
     // Stan dla widoczności panelu filtrów
@@ -70,19 +76,21 @@ const App: React.FC = () => {
     const { signOut} = useAuthenticator();
     const { sub: userSub} = useUserSub();
 
-
     const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
     const [currentPage, setCurrentPage] = useState(0);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState<number>(10);
     
+    const { sortOption, handleSortChange, sortPrompts } = useSort();
+
     const filteredPrompts = useMemo(() => {
-        return filterPrompts(allPrompts, searchFilters, selectedCategory);
-    }, [allPrompts, searchFilters, selectedCategory]);
+        const filtered = filterPrompts(allPrompts, searchFilters, selectedCategory);
+        return sortPrompts(filtered);
+      }, [allPrompts, searchFilters, selectedCategory, sortOption]);
     
     const displayedPrompts = useMemo(() => {
-        const startIdx = currentPage * PAGE_SIZE;
-        return filteredPrompts.slice(startIdx, startIdx + PAGE_SIZE);
-    }, [filteredPrompts, currentPage]);
+        const startIdx = currentPage * pageSize;
+        return filteredPrompts.slice(startIdx, startIdx + pageSize);
+    }, [filteredPrompts, currentPage, pageSize]);
     
     const totalFilteredCount = filteredPrompts.length;
     
@@ -114,7 +122,7 @@ const App: React.FC = () => {
         };
     }, [isFilterPanelVisible]);
 
-   
+
 
 
     const [newPrompt, setNewPrompt] = useState<{
@@ -188,7 +196,7 @@ const App: React.FC = () => {
         }
     ];
 
-        // Pobieranie promptów z bazy danych
+    // Pobieranie promptów z bazy danych
     useEffect(() => {
         const subscription = client.models.Prompt.observeQuery({
             selectionSet: [
@@ -218,7 +226,7 @@ const App: React.FC = () => {
 
                     const history: PromptHistoryItem[] = sortedVersions.map(v => ({
                         version: parseInt(v.versionNumber),
-                        date: new Date(v.creationDate).toLocaleDateString(),
+                        date: new Date(p.lastModifiedDate).toISOString(),
                         changes: `Version ${v.versionNumber}`,
                         content: v.content
                     }));
@@ -229,7 +237,7 @@ const App: React.FC = () => {
                         description: p.description || '',
                         tags: p.tags?.filter(Boolean) || [],
                         author: p.authorName,
-                        date: new Date(p.lastModifiedDate).toLocaleDateString(),
+                        date: new Date(p.lastModifiedDate).toISOString(),
                         usageCount: 0,
                         promptContent: p.content,
                         history: history.length > 0 ? history : undefined
@@ -261,26 +269,55 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // Obsługa kliknięcia poza menu profilu
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node | null;
-            if (!target) return;
-
-            const profileMenuContainer = document.querySelector('.profile-menu-container');
-            if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
-                setIsProfileMenuOpen(false);
+        // Ten useEffect synchronizuje selectedPrompt z aktualną listą fetchedPrompts
+        if (selectedPrompt && allPrompts.length > 0) {
+            // Znajdź zaktualizowaną wersję wybranego promptu na liście
+            const updatedVersionInList = allPrompts.find(p => String(p.id) === String(selectedPrompt.id));
+            if (updatedVersionInList) {
+                // Sprawdź, czy dane faktycznie się zmieniły, aby uniknąć niepotrzebnych re-renderów
+                // (proste porównanie stringów JSON, można użyć głębszego porównania, jeśli potrzebne)
+                if (JSON.stringify(selectedPrompt) !== JSON.stringify(updatedVersionInList)) {
+                    console.log('Aktualizowanie selectedPrompt z fetchedPrompts...');
+                    setSelectedPrompt(updatedVersionInList);
+                }
+            } else {
+                // Opcjonalnie: Obsłuż przypadek, gdy wybrany prompt został usunięty z listy
+                console.log('Wybrany prompt nie znaleziony na liście, być może został usunięty.');
+                setSelectedPrompt(null);
+                setIsPromptDetailOpen(false);
             }
-        };
-
-        if (isProfileMenuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
         }
+        // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
+    }, [allPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
+    
+    useEffect(() => {
+        if (selectedPrompt) {
+            const updatedPrompt = allPrompts.find(p => p.id === selectedPrompt.id);
+            if (updatedPrompt) setSelectedPrompt(updatedPrompt);
+        }
+    }, [allPrompts]);
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isProfileMenuOpen]);
+    // // Obsługa kliknięcia poza menu profilu
+    // useEffect(() => {
+    //     const handleClickOutside = (event: MouseEvent) => {
+    //         const target = event.target as Node | null;
+    //         if (!target) return;
+
+    //         const profileMenuContainer = document.querySelector('.profile-menu-container');
+    //         if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
+    //             setIsProfileMenuOpen(false);
+    //         }
+    //     };
+
+    //     if (isProfileMenuOpen) {
+    //         document.addEventListener('mousedown', handleClickOutside);
+    //     }
+
+    //     return () => {
+    //         document.removeEventListener('mousedown', handleClickOutside);
+    //     };
+    // }, [isProfileMenuOpen]);
 
     // Efekt inicjalizujący dane zespołu
     useEffect(() => {
@@ -362,12 +399,6 @@ const App: React.FC = () => {
         setIsPromptDetailOpen(true);
     };
 
-    // Obsługa menu profilu - poprawiona wersja
-    const toggleProfileMenu = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Zatrzymujemy propagację wydarzenia
-        setIsProfileMenuOpen(prev => !prev);
-    };
-
 
 
     // Obsługa otwierania formularza nowego promptu
@@ -430,19 +461,118 @@ const App: React.FC = () => {
         }
     };
 
-// Obsługa zapisania zmian w promptcie
-    const handleSaveEditedPrompt = (updatedPrompt: Prompt) => {
-        // W wersji produkcyjnej tutaj byłoby wywołanie API do aktualizacji promptu
-        console.log('Aktualizacja promptu:', updatedPrompt);
-        alert('Prompt został zaktualizowany! (symulacja w trybie lokalnym)');
+    const handleSaveEditedPrompt = async (editedPromptData: any) => {
+        if (!editingPrompt) return;
+      
+        try {
+          const tagsArray = typeof editedPromptData.tags === 'string'
+            ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+            : [...(editedPromptData.tags || [])];
+      
+          const now = new Date().toISOString();
+      
+          // 0. Zapis oryginalnego promptu jako wersji 1
+          if (!editingPrompt.history || editingPrompt.history.length === 0) {
+            await client.models.Version.create({
+                content: editingPrompt.promptContent,
+                versionNumber: "1",
+                creationDate: new Date().toISOString(),
+                promptId: editingPrompt.id
+            });
+          }
 
-
-        // Aktualizujemy wybrany prompt
-        setSelectedPrompt(updatedPrompt);
-
-        // Zamykamy okno edycji i otwieramy ponownie podgląd
-        setIsEditPromptOpen(false);
-        setIsPromptDetailOpen(true);
+          // 1. Aktualizacja głównego Prompt
+          const updatedPromptResult = await client.models.Prompt.update({
+            id: editingPrompt.id,
+            title: editedPromptData.title,
+            description: editedPromptData.description,
+            content: editedPromptData.promptContent,
+            tags: tagsArray,
+            lastModifiedDate: now,
+          });
+      
+          const updatedPrompt = updatedPromptResult.data;
+      
+          if (!updatedPrompt) {
+            console.error("Błąd aktualizacji prompta.");
+            alert("Nie udało się zapisać zmian.");
+            return;
+          }
+      
+          // 2. Tworzenie nowej wersji prompta
+          const versionNumber = String((editingPrompt.history?.length || 1) + 1);
+      
+          const newVersionResult = await client.models.Version.create({
+            promptId: updatedPrompt.id,
+            content: editedPromptData.promptContent,
+            versionNumber,
+            creationDate: now,
+          });
+      
+          const newVersion = newVersionResult.data;
+      
+          if (newVersion) {
+            await client.models.Prompt.update({
+              id: updatedPrompt.id,
+              latestVersionId: newVersion.id,
+            });
+          }
+      
+          // 3. Pobranie pełnych danych prompta + wersji
+          const promptListResult = await client.models.Prompt.list({
+            filter: { id: { eq: updatedPrompt.id } },
+          });
+          
+          const refreshed = promptListResult.data?.[0];
+          
+          const versionsResult = await refreshed.versions(); // <- to jest funkcja
+          const versions = versionsResult.data ?? [];
+      
+          const history: PromptHistoryItem[] = [...versions]
+            .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
+            .map((v) => ({
+              version: parseInt(v.versionNumber),
+              date: new Date(v.creationDate).toLocaleDateString(),
+              changes: `Wersja ${v.versionNumber}`,
+              content: v.content,
+            }));
+      
+          setSelectedPrompt({
+            id: refreshed.id,
+            title: refreshed.title,
+            description: refreshed.description || '',
+            tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
+            author: refreshed.authorName,
+            date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
+            usageCount: 0,
+            promptContent: refreshed.content,
+            history,
+          });
+      
+          alert("Zapisano zmiany i utworzono nową wersję!");
+          setIsEditPromptOpen(false);
+          setIsPromptDetailOpen(true);
+        } catch (error) {
+          console.error("Błąd podczas zapisywania edytowanego prompta:", error);
+          alert("Wystąpił błąd przy zapisie zmian.");
+        }
+      };
+      
+      
+      
+    
+    const handleDeletePrompt = async (promptId: string) => {
+        if (window.confirm('Czy na pewno chcesz usunąć ten prompt?')) {
+            try {
+                await client.models.Prompt.delete({ id: promptId });
+                setAllPrompts(prev => prev.filter(p => p.id !== promptId));
+                setIsPromptDetailOpen(false);
+                alert('Prompt usunięty!');
+            } catch (error) {
+                console.error('Błąd usuwania:', error);
+                alert('Błąd podczas usuwania');
+            }
+        }
     };
 
 // Obsługa zamknięcia modalu zespołu
@@ -456,14 +586,15 @@ const App: React.FC = () => {
         const query = (document.getElementById('filter-query') as HTMLInputElement)?.value || '';
         const author = (document.getElementById('filter-author') as HTMLInputElement)?.value || '';
         const tag = (document.getElementById('filter-tag') as HTMLInputElement)?.value || '';
-        const date = (document.getElementById('filter-date') as HTMLInputElement)?.value || '';
-
+        const dateFrom = (document.getElementById('filter-dateFrom') as HTMLInputElement)?.value || '';
+        const dateTo = (document.getElementById('filter-dateTo') as HTMLInputElement)?.value || '';
         // Przygotuj nowy obiekt filtrów
         const newFilters = {
             query,
             author,
             tag,
-            date
+            dateFrom,
+            dateTo
         };
 
         // Aktualizuj stan i zastosuj filtry
@@ -477,7 +608,7 @@ const App: React.FC = () => {
 // Obsługa resetowania filtrów
     const resetFilters = () => {
         // Resetujemy wartość wszystkich pól
-        ['filter-query', 'filter-author', 'filter-tag', 'filter-date'].forEach(id => {
+        ['filter-query', 'filter-author', 'filter-tag', 'filter-dateFrom', 'filter-dateTo'].forEach(id => {
             const input = document.getElementById(id) as HTMLInputElement;
             if (input) input.value = '';
         });
@@ -492,7 +623,8 @@ const App: React.FC = () => {
             query: '',
             author: '',
             tag: '',
-            date: '',
+            dateFrom: '',
+            dateTo: '',
             closePanel: true
         });
     };
@@ -502,24 +634,26 @@ const App: React.FC = () => {
         const filterQuery = options.query !== undefined ? options.query : searchFilters.query;
         const filterAuthor = options.author !== undefined ? options.author : searchFilters.author;
         const filterTag = options.tag !== undefined ? options.tag : searchFilters.tag;
-        const filterDate = options.date !== undefined ? options.date : searchFilters.date;
+        const filterDateFrom = options.dateFrom !== undefined ? options.dateFrom : searchFilters.dateFrom;
+        const filterDateTo = options.dateTo !== undefined ? options.dateTo : searchFilters.dateTo;
         const filterCategory = options.category !== undefined ? options.category : selectedCategory;
       
         const updatedFilters = {
-          query: filterQuery,
-          author: filterAuthor,
-          tag: filterTag,
-          date: filterDate
+            query: filterQuery,
+            author: filterAuthor,
+            tag: filterTag,
+            dateFrom: filterDateFrom,
+            dateTo: filterDateTo
         };
       
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
+        setCurrentPage(0);
       
         if (options.closePanel) {
           setIsFilterPanelVisible(false);
         }
-      };
-      
+    };
 
     useEffect(() => {
         const handleClickOutsideModals = (event: MouseEvent) => {
@@ -557,10 +691,6 @@ const App: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isCreatePromptOpen, isEditPromptOpen, isTeamModalOpen]);
 
-    const handleCategoryChange = (category: string) => {
-        // Użyj uniwersalnej funkcji filtrowania
-        applyFilters({ category });
-    };
 
     // Efekt do inicjalizacji filtrowanych promptów przy pierwszym renderowaniu
     useEffect(() => {
@@ -576,7 +706,6 @@ const App: React.FC = () => {
 
     const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const query = e.target.value;
-
         // Użyj uniwersalnej funkcji filtrowania
         applyFilters({ query });
     };
@@ -596,7 +725,7 @@ const App: React.FC = () => {
             {/* Sidebar */}
             <div className={sidebarClasses}>
                 <div className="sidebar-header">
-                    <h3>BETA</h3>
+                    <h3>DeloiHub</h3>
                     <div className="toggle-sidebar" onClick={toggleSidebar}>
                         <i className="bi bi-chevron-left"></i>
                     </div>
@@ -639,7 +768,7 @@ const App: React.FC = () => {
             <div className={`main-content ${isSidebarVisible ? 'with-sidebar' : ''}`}>
                 <div className="header">
                     {!isSidebarVisible && (
-                        <div className="sidebar-logo" onClick={handleLogoClick}>BETA</div>
+                        <div className="sidebar-logo" onClick={handleLogoClick}>DeloiHub</div>
                     )}
                     <div className="search-container">
                         <i className="bi bi-search search-icon"></i>
@@ -687,38 +816,9 @@ const App: React.FC = () => {
                         <button className="btn create-prompt-btn" onClick={openCreatePrompt}>
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
-                        {/* Poprawiony komponent menu profilu */}
-                        <div className="profile-menu-container">
-                            <img
-                                src="https://via.placeholder.com/40"
-                                alt="Profile"
-                                className="profile-img"
-                                onClick={toggleProfileMenu}
-                            />
-                            {isProfileMenuOpen && (
-                                <div className="profile-dropdown">
-                                    <div className="dropdown-menu">
-                                        <a href="#" className="dropdown-item">
-                                            <i className="bi bi-person me-2"></i>
-                                            Profil
-                                        </a>
-                                        <a href="#" className="dropdown-item">
-                                            <i className="bi bi-sliders me-2"></i>
-                                            Preferencje
-                                        </a>
-                                        <button
-                                            onClick={signOut}
-                                            className="dropdown-item logout-btn"
-                                            aria-label="Wyloguj"
-                                            title="Wyloguj"
-                                        >
-                                            <i className="bi bi-box-arrow-right me-2"></i>
-                                            Wyloguj
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+
+                        {/* Przycisk do otwierania menu profilu */}
+                        <ProfileMenu signOut={signOut} />
                     </div>
                 </div>
 
@@ -734,8 +834,10 @@ const App: React.FC = () => {
                         date={selectedPrompt.date}
                         usageCount={selectedPrompt.usageCount}
                         promptContent={selectedPrompt.promptContent}
-                        history={selectedPrompt.history}
+                        history={selectedPrompt.history || []}
                         onEdit={handleEditPrompt}
+                        onDelete={handleDeletePrompt}
+                        selectedPrompt={selectedPrompt}
                     />
                 ) : (
                     <div className="content-container">
@@ -748,7 +850,7 @@ const App: React.FC = () => {
 
                                 {/* Wskaźniki aktywnych filtrów */}
                                 {/* Wskaźniki aktywnych filtrów */}
-                                {(searchFilters.author || searchFilters.tag || searchFilters.date) && (
+                                {(searchFilters.author || searchFilters.tag || searchFilters.dateFrom || searchFilters.dateTo) && (
                                     <div className="active-filters ms-3">
                                         {searchFilters.author && (
                                             <span className="filter-badge">
@@ -774,12 +876,12 @@ const App: React.FC = () => {
             </span>
                                         )}
 
-                                        {searchFilters.date && (
+                                        {searchFilters.dateFrom || searchFilters.dateTo && (
                                             <span className="filter-badge">
-                Data: {searchFilters.date}
+                Data: {searchFilters.dateFrom || searchFilters.dateTo}
                                                 <button
                                                     className="clear-filter-btn"
-                                                    onClick={() => applyFilters({ date: '' })}
+                                                    onClick={() => applyFilters({ dateFrom: '', dateTo: '' })}
                                                 >
                     <i className="bi bi-x"></i>
                 </button>
@@ -789,34 +891,13 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <div>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'All' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('All')}
-                                >
-                                    All
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'Writing' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Writing')}
-                                >
-                                    Writing
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${selectedCategory === 'Programming' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Programming')}
-                                >
-                                    Programming
-                                </button>
-                                <button
-                                    className={`btn category-btn ${selectedCategory === 'Design' ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange('Design')}
-                                >
-                                    Design
-                                </button>
+                            <div className="sort-controls">
+                                <SortMenu 
+                                    currentSort={sortOption} 
+                                    onSortChange={handleSortChange} 
+                                />
                             </div>
                         </div>
-
                         <div className="row g-4">
                             {filteredPrompts.length > 0 ? (
                                 <>
@@ -833,19 +914,44 @@ const App: React.FC = () => {
                                     </div>
                                 ))}
                                 
-                                <div className="col-12 mt-4">
-                                    <Pagination
-                                        currentPage={currentPage + 1}
-                                        totalPages={Math.ceil(totalFilteredCount / PAGE_SIZE)}
-                                        onNext={() => setCurrentPage(prev => prev + 1)}
-                                        onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                        onChange={(newPageIndex?: number) => {
-                                            if (newPageIndex !== undefined) {
-                                            setCurrentPage(newPageIndex - 1); // Konwersja z 1-based
-                                            }
-                                        }}
-                                        siblingCount={1}
-                                    />
+                                <div className="col-12 mt-4 position-relative">
+                                    {/* Paginacja - wyśrodkowana */}
+                                    <div className="d-flex justify-content-center">
+                                        <Pagination
+                                            currentPage={currentPage + 1}
+                                            totalPages={Math.ceil(totalFilteredCount / pageSize)}
+                                            onNext={() => setCurrentPage(prev => prev + 1)}
+                                            onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                            onChange={(newPageIndex?: number) => {
+                                                if (newPageIndex !== undefined) {
+                                                    setCurrentPage(newPageIndex - 1);
+                                                }
+                                            }}
+                                            siblingCount={1}
+                                        />
+                                    </div>
+                                    
+                                    {/* Selektor - w prawym rogu */}
+                                    <div className="position-absolute end-0 top-0">
+                                        <div className="page-size-selector d-flex align-items-center">
+                                            <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                            <select 
+                                                id="page-size"
+                                                className="form-select form-select-sm"
+                                                value={pageSize}
+                                                onChange={(e) => {
+                                                    setPageSize(Number(e.target.value));
+                                                    setCurrentPage(0);
+                                                }}
+                                                style={{width: 'auto'}}
+                                            >
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="20">20</option>
+                                                <option value="50">50</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 </>
                             ) : (
@@ -862,7 +968,8 @@ const App: React.FC = () => {
                                                 query: '',
                                                 author: '',
                                                 tag: '',
-                                                date: '',
+                                                dateTo: '',
+                                                dateFrom: '',
                                                 category: 'All'
                                             });
                                         }}>
@@ -956,7 +1063,7 @@ const App: React.FC = () => {
                     isOpen={isEditPromptOpen}
                     onClose={() => {
                         setIsEditPromptOpen(false);
-                        setIsPromptDetailOpen(true); // Powrót do podglądu po anulowaniu
+                        setIsPromptDetailOpen(true);
                     }}
                     prompt={editingPrompt}
                     onSave={handleSaveEditedPrompt}
@@ -965,14 +1072,14 @@ const App: React.FC = () => {
 
             {/* Dodanie modalu zespołu do renderowania */}
             {isTeamModalOpen && (
-                <TeamModal
-                    isOpen={isTeamModalOpen}
-                    onClose={handleCloseTeamModal}
-                    members={teamMembers}
-                    currentUserRole={currentUserRole}
-                    teamPrompts={teamPrompts}
-                />
-            )}
+            <TeamModal
+                isOpen={isTeamModalOpen}
+                onClose={handleCloseTeamModal}
+                members={teamMembers}
+                teamPrompts={teamPrompts}
+                currentUserRole={currentUserRole}
+            />
+        )}
         </div>
     );
 };

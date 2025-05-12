@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { PromptDetailProps} from '../types/interfaces';
+import { PromptDetailProps } from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
     isOpen, onClose, title, tags, description, author, date, usageCount,
-    promptContent, history = [], onEdit
+    promptContent, history = [], onEdit,
+    onDelete, selectedPrompt
 }) => {
     const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -20,7 +21,8 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             setOldContent(selected);
             setNewContent(next);
         }
-    }, [selectedVersion, history, promptContent]);
+      }, [selectedVersion, history, promptContent]);
+      
 
     if (!isOpen) return null;
 
@@ -46,7 +48,14 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             <div className="prompt-info">
                 <p><strong>Description:</strong> {description}</p>
                 <p><strong>Created by:</strong> {author}</p>
-                <p><strong>Last updated:</strong> {date}</p>
+                <p><strong>Last updated:</strong> {new Date(date).toLocaleString("pl-PL", {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+                </p>
                 <p><strong>Usage count:</strong> {usageCount.toLocaleString()}</p>
             </div>
 
@@ -60,7 +69,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                             disabled={selectedVersion === history.length}
                         >
                             <i className={`bi ${isCompareMode ? 'bi-code-slash' : 'bi-git'}`}></i>
-                            {isCompareMode ? 'Pokaż normalnie' : 'Pokaż zmiany'}
+                            {isCompareMode ? 'Pokaż wybraną wersję' : 'Pokaż zmiany'}
                         </button>
                     )}
                 </div>
@@ -85,15 +94,18 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             </div>
 
             <div className="prompt-actions">
-                {history?.length > 0 && (
+                {history?.length >= 0 && (
                     <div className="history-dropdown">
                         <button
                             className="btn history-btn"
                             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                        >
+                            >
                             <i className="bi bi-clock-history"></i>
-                            {selectedVersion ? `Version ${selectedVersion}` : 'History'}
+                            {selectedVersion !== null
+                                ? `Wersja ${selectedVersion}`
+                                : 'Current Version'}
                         </button>
+
                         {isHistoryOpen && (
                             <div className="history-menu" ref={historyMenuRef}>
                                 <div className={`history-item ${selectedVersion === null ? 'active' : ''}`} onClick={() => setSelectedVersion(null)}>
@@ -106,7 +118,11 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                                         onClick={() => setSelectedVersion(item.version)}
                                     >
                                         <span>Version {item.version}</span>
-                                        <span>{item.date}</span>
+                                        <span>{new Date(item.date).toLocaleDateString("pl-PL", {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })}</span>
                                         <small>{item.changes}</small>
                                     </div>
                                 ))}
@@ -121,7 +137,14 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                     <button className="btn edit-btn" onClick={onEdit}>
                         <i className="bi bi-pencil"></i> Edit
                     </button>
+                    <button 
+                        className="btn delete-btn" 
+                        onClick={() => onDelete(selectedPrompt.id)}
+                    >
+                        <i className="bi bi-trash"></i> Delete
+                    </button>
                     <button className="btn use-btn">Use This Prompt</button>
+
                 </div>
             </div>
         </div>

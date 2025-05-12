@@ -21,7 +21,8 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             setOldContent(selected);
             setNewContent(next);
         }
-    }, [selectedVersion, history, promptContent]);
+      }, [selectedVersion, history, promptContent]);
+      
 
     if (!isOpen) return null;
 
@@ -68,7 +69,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                             disabled={selectedVersion === history.length}
                         >
                             <i className={`bi ${isCompareMode ? 'bi-code-slash' : 'bi-git'}`}></i>
-                            {isCompareMode ? 'Pokaż normalnie' : 'Pokaż zmiany'}
+                            {isCompareMode ? 'Pokaż wybraną wersję' : 'Pokaż zmiany'}
                         </button>
                     )}
                 </div>

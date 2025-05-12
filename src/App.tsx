@@ -463,54 +463,93 @@ const App: React.FC = () => {
 
     const handleSaveEditedPrompt = async (editedPromptData: any) => {
         if (!editingPrompt) return;
-    
-        console.log("Rozpoczynanie zapisu edycji (App.tsx)...", editedPromptData); // Dodaj log tutaj
-    
+      
         try {
-            let tagsArray = [];
-            if (editedPromptData.tags) {
-                tagsArray = typeof editedPromptData.tags === 'string' 
-                    ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) 
-                    : [...editedPromptData.tags];
-            } else {
-                // Zachowaj istniejące tagi jeśli nie ma nowych
-                tagsArray = [...editingPrompt.tags];
-            }
-    
-            const updateData = {
-                id: String(editingPrompt.id),
-                title: editedPromptData.title,
-                description: editedPromptData.description,
-                content: editedPromptData.promptContent,
-                tags: tagsArray,
-                lastModifiedDate: new Date().toISOString(),
-            };
-    
-            console.log("Dane do wysłania (update):", updateData);
-    
-            const { data: updatedPrompt, errors } = await client.models.Prompt.update(updateData);
-            
-            console.log("Odpowiedź z Amplify update:", { updatedPrompt, errors });
-    
-            if (errors) {
-                console.error("BŁĘDY zwrócone przez Amplify update:", errors);
-                setError("Nie udało się zapisać zmian w promcie.");
-                return;
-            }
-    
-            console.log("Prompt zaktualizowany pomyślnie (bez błędów w odpowiedzi Amplify):", updatedPrompt);
-    
-            alert("Zmiany w prompcie zostały pomyślnie zapisane!");
-    
-            setIsEditPromptOpen(false);
-            setIsPromptDetailOpen(true);
-    
-    
+          const tagsArray = typeof editedPromptData.tags === 'string'
+            ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+            : [...(editedPromptData.tags || [])];
+      
+          const now = new Date().toISOString();
+      
+          // 1. Aktualizacja głównego Prompt
+          const updatedPromptResult = await client.models.Prompt.update({
+            id: editingPrompt.id,
+            title: editedPromptData.title,
+            description: editedPromptData.description,
+            content: editedPromptData.promptContent,
+            tags: tagsArray,
+            lastModifiedDate: now,
+          });
+      
+          const updatedPrompt = updatedPromptResult.data;
+      
+          if (!updatedPrompt) {
+            console.error("Błąd aktualizacji prompta.");
+            alert("Nie udało się zapisać zmian.");
+            return;
+          }
+      
+          // 2. Tworzenie nowej wersji prompta
+          const versionNumber = String((editingPrompt.history?.length || 0) + 1);
+      
+          const newVersionResult = await client.models.Version.create({
+            promptId: updatedPrompt.id,
+            content: editedPromptData.promptContent,
+            versionNumber,
+            creationDate: now,
+          });
+      
+          const newVersion = newVersionResult.data;
+      
+          if (newVersion) {
+            await client.models.Prompt.update({
+              id: updatedPrompt.id,
+              latestVersionId: newVersion.id,
+            });
+          }
+      
+          // 3. Pobranie pełnych danych prompta + wersji
+          const promptListResult = await client.models.Prompt.list({
+            filter: { id: { eq: updatedPrompt.id } },
+          });
+          
+          const refreshed = promptListResult.data?.[0];
+          
+          const versionsResult = await refreshed.versions(); // <- to jest funkcja
+          const versions = versionsResult.data ?? [];
+      
+          const history: PromptHistoryItem[] = [...versions]
+            .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
+            .map((v) => ({
+              version: parseInt(v.versionNumber),
+              date: new Date(v.creationDate).toLocaleDateString(),
+              changes: `Wersja ${v.versionNumber}`,
+              content: v.content,
+            }));
+      
+          setSelectedPrompt({
+            id: refreshed.id,
+            title: refreshed.title,
+            description: refreshed.description || '',
+            tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
+            author: refreshed.authorName,
+            date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
+            usageCount: 0,
+            promptContent: refreshed.content,
+            history,
+          });
+      
+          alert("Zapisano zmiany i utworzono nową wersję!");
+          setIsEditPromptOpen(false);
+          setIsPromptDetailOpen(true);
         } catch (error) {
-            console.error("Nieoczekiwany błąd CATCH podczas zapisywania edytowanego promptu:", error);
-            setError("Wystąpił nieoczekiwany błąd podczas zapisywania zmian.");
+          console.error("Błąd podczas zapisywania edytowanego prompta:", error);
+          alert("Wystąpił błąd przy zapisie zmian.");
         }
-    };
+      };
+      
+      
+      
     
     const handleDeletePrompt = async (promptId: string) => {
         if (window.confirm('Czy na pewno chcesz usunąć ten prompt?')) {

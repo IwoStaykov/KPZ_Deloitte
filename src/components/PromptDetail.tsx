@@ -21,7 +21,8 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             setOldContent(selected);
             setNewContent(next);
         }
-    }, [selectedVersion, history, promptContent]);
+      }, [selectedVersion, history, promptContent]);
+      
 
     if (!isOpen) return null;
 
@@ -68,7 +69,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                             disabled={selectedVersion === history.length}
                         >
                             <i className={`bi ${isCompareMode ? 'bi-code-slash' : 'bi-git'}`}></i>
-                            {isCompareMode ? 'Pokaż normalnie' : 'Pokaż zmiany'}
+                            {isCompareMode ? 'Pokaż wybraną wersję' : 'Pokaż zmiany'}
                         </button>
                     )}
                 </div>
@@ -93,15 +94,18 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             </div>
 
             <div className="prompt-actions">
-                {history?.length > 0 && (
+                {history?.length >= 0 && (
                     <div className="history-dropdown">
                         <button
                             className="btn history-btn"
                             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                        >
+                            >
                             <i className="bi bi-clock-history"></i>
-                            {selectedVersion ? `Version ${selectedVersion}` : 'History'}
+                            {selectedVersion !== null
+                                ? `Wersja ${selectedVersion}`
+                                : 'Current Version'}
                         </button>
+
                         {isHistoryOpen && (
                             <div className="history-menu" ref={historyMenuRef}>
                                 <div className={`history-item ${selectedVersion === null ? 'active' : ''}`} onClick={() => setSelectedVersion(null)}>

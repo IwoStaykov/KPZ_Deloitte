@@ -193,7 +193,8 @@ small.text-muted {
 /* Profile menu styles */
 .profile-menu-container {
     position: relative !important;
-    z-index: 1600 !important;
+    z-index: 9999 !important;
+    isolation: isolate; /* Tworzy nowy kontekst układania, co pomaga z problemami z-index */
 }
 
 .profile-img {
@@ -209,23 +210,6 @@ small.text-muted {
     opacity: 0.8;
 }
 
-.profile-dropdown {
-    position: absolute;
-    right: 0;
-    left: auto;
-    top: 50px;
-    background-color: var(--card-background);
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    min-width: 220px;
-    z-index: 1500;
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-    max-height: 80vh;
-    overflow-y: auto;
-    animation: slideDown 0.2s ease-out;
-    transform-origin: top right;
-}
 
 @keyframes slideDown {
     from {
@@ -238,36 +222,6 @@ small.text-muted {
     }
 }
 
-/* Poprawka dla kontenera menu */
-.dropdown-menu {
-    position: static;
-    display: block;
-    float: none;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    background-color: transparent;
-    overflow-wrap: break-word;
-}
-
-/* Wyraźniejszy styl dla elementów menu */
-.dropdown-item {
-    display: flex !important;
-    align-items: center !important;
-    padding: 12px 16px !important;
-    color: var(--text-color) !important;
-    text-decoration: none !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    transition: background-color 0.2s !important;
-    background-color: transparent !important;
-    cursor: pointer !important;
-    width: 100% !important;
-    text-align: left !important;
-    font-size: 0.95rem !important;
-}
 
 /* Styl dla przycisku wylogowania */
 button.dropdown-item {
@@ -282,58 +236,6 @@ button.dropdown-item {
     color: var(--text-color) !important;
 }
 
-/* Efekt hover dla wszystkich elementów menu */
-.dropdown-item:hover,
-button.dropdown-item:hover {
-    background-color: rgba(var(--primary-color-rgb), 0.1) !important;
-    color: var(--primary-color) !important;
-}
-
-/* Specyficzny styl dla przycisku wylogowania */
-.logout-btn {
-    background-color: rgba(220, 53, 69, 0.05) !important;
-    border-radius: 0 0 8px 8px !important;
-    margin-top: 4px !important;
-    position: relative !important;
-    text-align: left !important;
-    font-weight: 500 !important;
-    color: #dc3545 !important;
-}
-
-/* Dodanie linii oddzielającej */
-.logout-btn::before {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: 10%;
-    right: 10%;
-    height: 1px;
-    background-color: var(--border-color);
-}
-
-/* Efekt hover dla przycisku wylogowania */
-.logout-btn:hover {
-    background-color: rgba(220, 53, 69, 0.1) !important;
-    color: #dc3545 !important;
-}
-
-/* Ikona przycisku wylogowania */
-.logout-btn i {
-    color: #dc3545 !important;
-}
-
-/* Usunięcie marginesu z prawej strony dla ikon */
-.dropdown-item i {
-    margin-right: 12px !important;
-}
-
-/* Poprawka pozycjonowania menu profilu na urządzeniach mobilnych */
-@media (max-width: 768px) {
-    .profile-dropdown {
-        right: -10px;
-        min-width: 180px;
-    }
-}
 
 /* Nowy styl dla widoku szczegółów promptu */
 .prompt-detail-view {
@@ -833,6 +735,45 @@ input:checked + .toggle-slider:before {
     color: white;
 }
 
+/* Style dla przycisków sortowania - zapewniają wyższy priorytet */
+.sort-controls .category-btn {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.8rem;
+    transition: all 0.2s ease;
+    border-radius: 20px;
+}
+
+/* Zapewnienie, że styl .active ma priorytet w kontekście sort-controls */
+.sort-controls .category-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+/*
+.sort-controls .category-btn:hover {
+    background-color: rgba(var(--primary-color-rgb), 0.1);
+    transform: translateY(-2px);
+}
+*/
+.sort-controls .category-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dostosowanie na urządzenia mobilne */
+@media (max-width: 768px) {
+    .sort-controls {
+        margin-top: 1rem;
+        overflow-x: auto;
+        width: 100%;
+        padding-bottom: 0.5rem;
+    }
+
+    .sort-controls .category-btn {
+        white-space: nowrap;
+    }
+}
+
 /* Fix: Create button gradient stays consistent */
 .create-prompt-btn {
     border-radius: 20px;
@@ -877,15 +818,15 @@ input:checked + .toggle-slider:before {
 }
 
 .delete-btn {
-    background-color: #ffe6e6;
-    border-color: #ffb3b3;
-    color: #cc0000;
+    background-color: #dc3545;
+    border-color: #c82333;
+    color: white;
     margin-left: 8px;
 }
 
 .delete-btn:hover {
-    background-color: #ffcccc;
-    border-color: #ff9999;
+    background-color: #bd2130;
+    border-color: #a71d2a;
 }
 
 .bi-trash {
@@ -989,9 +930,9 @@ input:checked + .toggle-slider:before {
     background-color: var(--header-background);
 }
 
-@keyframes slideUp {
-    from { transform: translateY(50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+@keyframes mobilePanelSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
 .modal-header {
@@ -1160,11 +1101,51 @@ input:checked + .toggle-slider:before {
     font-size: 0.9rem;
 }
 
-.filter-group input[type="date"] {
-    padding: 0.375rem 0.75rem;
-    border: 1px solid #ced4da;
+/* Style dla wszystkich pól formularza w panelu filtrów */
+.filter-panel .form-control {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
     border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Specyficzne style dla pól daty */
+.filter-group input[type="date"] {
     height: calc(1.5em + 0.75rem + 2px);
+    width: 100%;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+/* Ikona kalendarza w normalnym trybie */
+.filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+/* Specyficzne style dla trybu ciemnego */
+[data-theme="dark"] .filter-panel .form-control,
+[data-theme="dark"] .filter-group input[type="date"] {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+/* Ikona kalendarza w trybie ciemnym */
+[data-theme="dark"] .filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+}
+
+/* Stany active i focus dla pól formularza */
+.filter-panel .form-control:focus,
+.filter-group input[type="date"]:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
 }
 
 .filter-footer {
@@ -1277,10 +1258,10 @@ input:checked + .toggle-slider:before {
         border-radius: 12px 12px 0 0;
         max-height: 80vh;
         overflow-y: auto;
-        animation: slideUp 0.3s ease-out;
+        animation: mobilePanelSlideUp 0.3s ease-out;
     }
 
-    @keyframes slideUp {
+    @keyframes mobilePanelSlideUp {
         from { transform: translateY(100%); }
         to { transform: translateY(0); }
     }
@@ -1457,7 +1438,7 @@ input:checked + .toggle-slider:before {
     position: relative;
     display: inline-block;
   }
-  
+
   .sort-button {
     background-color: #f8f9fa;
     border: 1px solid #ced4da;
@@ -1468,11 +1449,11 @@ input:checked + .toggle-slider:before {
     align-items: center;
     gap: 6px;
   }
-  
+
   .sort-dropdown {
     position: absolute;
     top: 100%;
-    right: 1;
+    right: auto;
     z-index: 10;
     background-color: white;
     border: 1px solid #ddd;
@@ -1483,40 +1464,40 @@ input:checked + .toggle-slider:before {
     width: max-content;
     min-width: 160px;
   }
-  
+
   .sort-dropdown li {
     padding: 8px 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
   }
-  
+
   .sort-dropdown li:hover {
     background-color: #f1f1f1;
   }
-  
+
   .dropdown-toggle {
     min-width: 160px;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
-  
-  .dropdown-item {
+
+.sort-dropdown .dropdown-item {
     display: flex;
     align-items: center;
     padding: 0.5rem 1rem;
-  }
-  
-  .dropdown-item.active {
+}
+
+.sort-dropdown .dropdown-item.active {
     background-color: var(--primary-light);
     color: var(--primary-dark);
-  }
-  
-  .dropdown-item .bi {
+}
+
+.sort-dropdown .dropdown-item .bi {
     font-size: 1.1rem;
     margin-right: 0.5rem;
-  }
+}
 
 /* Paginacja */
   .page-size-selector {
@@ -1536,8 +1517,614 @@ input:checked + .toggle-slider:before {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .page-size-selector {
         margin-bottom: 1rem;
     }
+}
+
+/* Poprawki dla komponentu paginacji Amplify */
+.amplify-pagination {
+    margin-top: 1rem !important;
+}
+
+/* Style dla przycisków paginacji w trybie jasnym */
+.amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__item {
+    color: var(--text-color);
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    margin: 0 2px;
+    font-weight: 500;
+}
+
+/* Aktywny przycisk strony w trybie jasnym */
+.amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__item[data-current="true"] {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Style dla przycisków paginacji w trybie ciemnym */
+[data-theme="dark"] .amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__item {
+    color: #e9ecef;
+    background-color: #2a2d3e;
+    border-color: #495057;
+}
+
+/* Aktywny przycisk strony w trybie ciemnym */
+[data-theme="dark"] .amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__item[data-current="true"] {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Przyciski poprzedniej/następnej strony */
+.amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__prev-btn,
+.amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__next-btn {
+    color: var(--text-color);
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+}
+
+/* Przyciski poprzedniej/następnej strony w trybie ciemnym */
+[data-theme="dark"] .amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__prev-btn,
+[data-theme="dark"] .amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small.amplify-pagination__next-btn {
+    color: #e9ecef;
+    background-color: #2a2d3e;
+    border-color: #495057;
+}
+
+
+/* ==============================
+   MENU PROFILU - STYLE FINALNE
+   ============================== */
+
+/* Kontener menu profilu */
+.profile-menu-container {
+    position: relative !important;
+    z-index: 9999 !important;
+    isolation: isolate !important;
+}
+
+/* Obraz profilu */
+.profile-img {
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    transition: opacity 0.2s !important;
+}
+
+.profile-img:hover {
+    opacity: 0.8 !important;
+}
+
+/* Dropdown menu */
+.profile-dropdown {
+    position: fixed !important;
+    right: 20px !important;
+    left: auto !important;
+    top: 80px !important;
+    width: 220px !important;
+    transform: none !important;
+    background-color: var(--card-background) !important;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5) !important;
+    border: 2px solid var(--border-color) !important;
+    backdrop-filter: blur(8px) !important;
+    border-radius: 8px !important;
+    min-width: 220px !important;
+    z-index: 9999 !important;
+    overflow: hidden !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+    animation: slideDown 0.2s ease-out !important;
+    transform-origin: top right !important;
+    display: block !important;
+}
+
+/* Kontener elementów menu */
+.profile-dropdown .dropdown-menu {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    position: static !important;
+    float: none !important;
+    min-width: unset !important;
+    list-style: none !important;
+}
+
+/* Wszystkie elementy menu - w tym linki i przyciski */
+.profile-dropdown .dropdown-menu a.dropdown-item,
+.profile-dropdown .dropdown-menu button.dropdown-item,
+.profile-dropdown a.dropdown-item,
+.profile-dropdown button.dropdown-item,
+.profile-dropdown .dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    background-color: var(--card-background) !important;
+    position: relative !important;
+    z-index: 1 !important;
+    padding: 12px 16px !important;
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    transition: background-color 0.2s, color 0.2s !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    text-align: left !important;
+    font-size: 0.95rem !important;
+    margin: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    border-radius: 0 !important;
+    font-family: inherit !important;
+    line-height: 1.5 !important;
+    font-weight: normal !important;
+    appearance: none !important;
+    opacity: 1 !important;
+    outline: none !important;
+}
+
+/* Hover dla WSZYSTKICH elementów menu OPRÓCZ logout-btn */
+.profile-dropdown .dropdown-menu a.dropdown-item:not(.logout-btn):hover,
+.profile-dropdown .dropdown-menu button.dropdown-item:not(.logout-btn):hover,
+.profile-dropdown a.dropdown-item:not(.logout-btn):hover,
+.profile-dropdown button.dropdown-item:not(.logout-btn):hover,
+.profile-dropdown .dropdown-item:not(.logout-btn):hover {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    opacity: 1 !important;
+    text-decoration: none !important;
+}
+
+/* Ikony w elementach menu */
+.profile-dropdown .dropdown-item i,
+.profile-dropdown a.dropdown-item i,
+.profile-dropdown button.dropdown-item i {
+    margin-right: 12px !important;
+    color: inherit !important;
+    font-size: 1.1rem !important;
+}
+
+/* Ikony przy hover dla elementów które nie są logout */
+.profile-dropdown .dropdown-item:not(.logout-btn):hover i,
+.profile-dropdown a.dropdown-item:not(.logout-btn):hover i,
+.profile-dropdown button.dropdown-item:not(.logout-btn):hover i {
+    color: white !important;
+}
+
+/* Przycisk wylogowania */
+.profile-dropdown .logout-btn,
+.profile-dropdown button.logout-btn,
+.profile-dropdown a.logout-btn,
+.profile-dropdown .dropdown-menu .logout-btn,
+.profile-dropdown .dropdown-menu button.logout-btn,
+.profile-dropdown .dropdown-menu a.logout-btn {
+    background-color: var(--card-background) !important;
+    border-radius: 0 0 8px 8px !important;
+    position: relative !important;
+    text-align: left !important;
+    font-weight: 500 !important;
+    color: var(--text-color) !important;
+    border-bottom: none !important;
+    padding: 12px 16px !important;
+    margin-top: 0 !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    font-size: 0.95rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Efekt hover dla przycisku wylogowania */
+.profile-dropdown .logout-btn:hover,
+.profile-dropdown button.logout-btn:hover,
+.profile-dropdown a.logout-btn:hover,
+.profile-dropdown .dropdown-menu .logout-btn:hover,
+.profile-dropdown .dropdown-menu button.logout-btn:hover,
+.profile-dropdown .dropdown-menu a.logout-btn:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.3) !important;
+}
+
+/* Ikona przycisku wylogowania */
+.profile-dropdown .logout-btn i,
+.profile-dropdown button.logout-btn i,
+.profile-dropdown a.logout-btn i {
+    color: var(--text-color) !important;
+    margin-right: 12px !important;
+}
+
+/* Ikona przycisku wylogowania po najechaniu */
+.profile-dropdown .logout-btn:hover i,
+.profile-dropdown button.logout-btn:hover i,
+.profile-dropdown a.logout-btn:hover i {
+    color: white !important;
+}
+
+/* Animacja wysuwania dropdown */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Style dla trybu ciemnego */
+[data-theme="dark"] .profile-dropdown {
+    background-color: #2a2d3e !important;
+    border-color: #495057 !important;
+}
+
+[data-theme="dark"] .profile-dropdown .dropdown-item,
+[data-theme="dark"] .profile-dropdown a.dropdown-item,
+[data-theme="dark"] .profile-dropdown button.dropdown-item {
+    background-color: #2a2d3e !important;
+    color: #e9ecef !important;
+    border-color: #495057 !important;
+}
+
+[data-theme="dark"] .profile-dropdown .logout-btn,
+[data-theme="dark"] .profile-dropdown button.logout-btn,
+[data-theme="dark"] .profile-dropdown a.logout-btn {
+    background-color: #2a2d3e !important;
+    color: #e9ecef !important;
+    border-color: #495057 !important;
+}
+
+[data-theme="dark"] .profile-dropdown .logout-btn:hover,
+[data-theme="dark"] .profile-dropdown button.logout-btn:hover,
+[data-theme="dark"] .profile-dropdown a.logout-btn:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.5) !important;
+}
+
+/* Responsywność dla urządzeń mobilnych */
+@media (max-width: 768px) {
+    .profile-dropdown {
+        right: 10px !important;
+        top: 70px !important;
+        width: 200px !important;
+        min-width: 200px !important;
+    }
+}
+
+/* ==============================
+   NOWE ELEMENTY
+   ============================== */
+/* Kontekst promptu */
+.context-textarea {
+    min-height: 220px !important; /* Zwiększona wysokość minimalna */
+    height: 280px !important; /* Stała początkowa wysokość */
+    max-height: 500px !important; /* Zwiększona maksymalna wysokość przy zmianie rozmiaru */
+    margin-bottom: 2rem;
+    resize: vertical;
+    font-family: Consolas, Monaco, 'Andale Mono', monospace;
+    white-space: pre-wrap;
+    padding: 1.5rem;
+    font-size: 0.95rem;
+}
+
+/* Panel chatu */
+.chat-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100vh;
+    background-color: var(--card-background);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: 1900;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--header-background);
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    max-width: 80%;
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.system-message {
+    width: 100%;
+    max-width: 100%;
+    background-color: var(--secondary-color);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.bot-message {
+    align-self: flex-start;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border-bottom-left-radius: 0.25rem;
+}
+
+.prompt-info-snippet {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.chat-input-area {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    background-color: var(--card-background);
+}
+
+.chat-input {
+    flex: 1;
+    min-height: 80px;
+    max-height: 120px;
+    resize: none;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    font-family: inherit;
+}
+
+.chat-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.25);
+}
+
+.send-btn {
+    align-self: flex-end;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.send-btn:hover {
+    background-color: var(--accent-color);
+}
+
+/* Styl dla trybu ciemnego */
+[data-theme="dark"] .system-message {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .bot-message {
+    background-color: #2a2d3e;
+}
+
+/* Dostosowanie widoku szczegółów promptu gdy chat jest otwarty */
+.prompt-detail-view.with-chat-open {
+    margin-right: 380px;
+    width: calc(100% - 380px);
+    transition: margin-right 0.3s ease, width 0.3s ease;
+}
+
+/* Kontekst promptu */
+.context-textarea {
+    min-height: 220px !important;
+    height: 280px !important;
+    max-height: 500px !important;
+    margin-bottom: 2rem;
+    resize: vertical;
+    font-family: Consolas, Monaco, 'Andale Mono', monospace;
+    white-space: pre-wrap;
+}
+
+.context-hint {
+    font-size: 0.85rem;
+    font-weight: normal;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-left: 0.5rem;
+}
+
+/* Panel chatu */
+.chat-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100vh;
+    background-color: var(--card-background);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: 1900;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--header-background);
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    max-width: 80%;
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.system-message {
+    width: 100%;
+    max-width: 100%;
+    background-color: var(--secondary-color);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.bot-message {
+    align-self: flex-start;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border-bottom-left-radius: 0.25rem;
+}
+
+.prompt-info-snippet {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.chat-input-area {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    background-color: var(--card-background);
+}
+
+.chat-input {
+    flex: 1;
+    min-height: 80px;
+    max-height: 120px;
+    resize: none;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    font-family: inherit;
+}
+
+.chat-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.25);
+}
+
+.send-btn {
+    align-self: flex-end;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.send-btn:hover {
+    background-color: var(--accent-color);
+}
+
+/* Styl dla trybu ciemnego */
+[data-theme="dark"] .system-message {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .bot-message {
+    background-color: #2a2d3e;
+}
+
+/* Dostosowanie widoku szczegółów promptu gdy chat jest otwarty */
+.prompt-detail-view.with-chat-open {
+    margin-right: 380px;
+    width: calc(100% - 380px);
+    transition: margin-right 0.3s ease, width 0.3s ease;
 }

@@ -18,14 +18,11 @@ const PromptCard: React.FC<PromptCardProps> = ({ title, description, tags, autho
             <div className="card-footer py-3">
                 <small className="text-muted">
                     By {author} • {new Date(date).toLocaleDateString("pl-PL", {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    })}
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                })}
                 </small>
-                <button className="btn bookmark-btn">
-                    <i className="bi bi-bookmark"></i>
-                </button>
             </div>
         </div>
     );

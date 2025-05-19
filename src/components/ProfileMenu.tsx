@@ -2,60 +2,74 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface ProfileMenuProps {
   signOut: () => void;
+  isDarkTheme?: boolean;
 }
 
-const ProfileMenu: React.FC<ProfileMenuProps> = ({ signOut }) => {
-  const [open, setOpen] = useState(false);
+const ProfileMenu: React.FC<ProfileMenuProps> = ({ signOut, isDarkTheme }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const toggleMenu = () => setOpen(prev => !prev);
+  const toggleMenu = () => setIsOpen(prev => !prev);
 
+  // Handle clicks outside the menu
   const handleClickOutside = (e: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-      setOpen(false);
+      setIsOpen(false);
+    }
+  };
+
+  // New function to handle scroll events
+  const handleScroll = () => {
+    if (isOpen) {
+      setIsOpen(false);
     }
   };
 
   useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    // Add event listeners when menu is open
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll); // Add scroll listener
+    }
+
+    // Remove event listeners when menu is closed or component unmounts
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll); // Remove scroll listener
+    };
+  }, [isOpen]); // Dependency on isOpen ensures listeners are updated when menu state changes
 
   return (
-    <div className="dropdown" ref={menuRef}>
-      <img
-        src="https://via.placeholder.com/40"
-        alt="Profile"
-        className="profile-img"
-        onClick={toggleMenu}
-        role="button"
-        style={{ cursor: 'pointer' }}
-      />
-      {open && (
-        <ul className="dropdown-menu dropdown-menu-end show" style={{ display: 'block', position: 'absolute' }}>
-          <li>
-            <a className="dropdown-item" href="#">
-              <i className="bi bi-person me-2"></i> Profil
-            </a>
-          </li>
-          <li>
-            <a className="dropdown-item" href="#">
-              <i className="bi bi-sliders me-2"></i> Preferencje
-            </a>
-          </li>
-          <li>
-            <button
-              className="dropdown-item"
-              onClick={signOut}
-              aria-label="Wyloguj"
-              title="Wyloguj"
-            >
-              <i className="bi bi-box-arrow-right me-2"></i> Wyloguj
-            </button>
-          </li>
-        </ul>
-      )}
-    </div>
+      <div className="profile-menu-container" ref={menuRef}>
+        <img
+            src="https://via.placeholder.com/40"
+            alt="Profile"
+            className="profile-img"
+            onClick={toggleMenu}
+        />
+        {isOpen && (
+            <div className={`profile-dropdown ${isDarkTheme ? 'dark-theme-dropdown' : ''}`}>
+              <div className="dropdown-menu">
+                <a className="dropdown-item" href="#profile">
+                  <i className="bi bi-person"></i> Profil
+                </a>
+                <a className="dropdown-item" href="#preferences">
+                  <i className="bi bi-sliders"></i> Preferencje
+                </a>
+                <button
+                    className="dropdown-item logout-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      signOut();
+                    }}
+                    type="button"
+                >
+                  <i className="bi bi-box-arrow-right"></i> Wyloguj
+                </button>
+              </div>
+            </div>
+        )}
+      </div>
   );
 };
 

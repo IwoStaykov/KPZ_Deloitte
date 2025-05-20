@@ -81,6 +81,7 @@ const App: React.FC = () => {
     const [pageSize, setPageSize] = useState<number>(10);
     
     const { sortOption, handleSortChange, sortPrompts } = useSort();
+    const [isLoadingPrompts, setIsLoadingPrompts] = useState<boolean>(true);
 
     const filteredPrompts = useMemo(() => {
         const filtered = filterPrompts(allPrompts, searchFilters, selectedCategory);
@@ -244,12 +245,18 @@ const App: React.FC = () => {
                     };
                 });
 
-              
-                setAllPrompts(transformedPrompts);
+            // Sortowanie od razu po pobraniu
+            const sorted = transformedPrompts.sort((a, b) => 
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+               
+                setAllPrompts(sorted);
+                setIsLoadingPrompts(false);
             },
             error: (err) => {
                 console.error("Błąd observeQuery:", err);
                 setError("Nie udało się połączyć z bazą danych.");
+                setIsLoadingPrompts(false);
             }
         });
 
@@ -898,6 +905,12 @@ const App: React.FC = () => {
                                 />
                             </div>
                         </div>
+                        {isLoadingPrompts ? (
+                            <div className="loading-state text-center py-5">
+                                <i className="bi bi-arrow-repeat spinner display-4"></i>
+                                <p>Ładowanie promptów...</p>
+                            </div>
+                        ) : (
                         <div className="row g-4">
                             {filteredPrompts.length > 0 ? (
                                 <>
@@ -979,6 +992,7 @@ const App: React.FC = () => {
                                 </div>
                             )}
                         </div>
+                        )}
                     </div>
                 )}
             </div>

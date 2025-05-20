@@ -77,8 +77,6 @@ const App: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState<number>(10);
 
-    
-    const { sortOption, handleSortChange, sortPrompts } = useSort();
     const [isLoadingPrompts, setIsLoadingPrompts] = useState<boolean>(true);
 
     const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'titleAZ' | 'titleZA'>('newest');

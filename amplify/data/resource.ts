@@ -46,6 +46,21 @@ const schema = a.schema({
       allow.authenticated().to(['read']) // Dla zalogowanych użytkowników
     ])
     .identifier(['userId', 'promptId']),
+
+    TestPrompt: a.generation({
+      aiModel: {
+        resourcePath: 'anthropic.claude-3-7-sonnet-20250219-v1:0'
+      },
+      systemPrompt: 'You are a helpful assistant, that test prompts.',
+    })
+    .arguments({
+      testPromptContent: a.string(),
+    })
+    .returns(
+      a.string())
+    .authorization((allow) => 
+      allow.authenticated() // Dla zalogowanych użytkowników
+    )
 });
 
 export type Schema = ClientSchema<typeof schema>;

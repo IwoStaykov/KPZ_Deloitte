@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PromptDetailProps } from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
+import { useAIGeneration } from '../client';
+import { Loader, Text, View } from '@aws-amplify/ui-react';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
     isOpen, onClose, title, tags, description, author, date, usageCount,
@@ -29,6 +31,62 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
     const displayContent = selectedVersion !== null && history
         ? history.find(item => item.version === selectedVersion)?.content || promptContent
         : promptContent;
+    
+    const [ testPromptContent, setTestPromptContent] = useState("");
+    const [{ data, isLoading}, TestPrompt] = useAIGeneration("TestPrompt");
+    const handleGenerate = async () => {
+        console.log("Sending prompt:", testPromptContent);        
+        TestPrompt({ testPromptContent});
+        console.log("AI response data:", data);
+    };
+
+    useEffect(() => {
+        setTestPromptContent(displayContent);
+    }, [displayContent]);
+
+/*    
+const formatAIResponse = (response: string | undefined) => {
+        if (!response) return <Text color="gray">No response yet</Text>;
+        
+        // Handle markdown-like formatting
+        if (response.includes('```')) {
+            return (
+                <pre className="ai-response-pre">
+                    <code>{response.replace(/```/g, '')}</code>
+                </pre>
+            );
+        }
+
+        // Handle bullet points and numbered lists
+        if (response.includes('* ') || response.includes('- ') || response.match(/^\d+\./)) {
+            return response.split('\n').map((line, index) => {
+                if (line.trim().match(/^[\*\-]\s/) || line.trim().match(/^\d+\.\s/)) {
+                    return (
+                        <div key={index} className="ai-response-list-item">
+                            {line.trim()}
+                        </div>
+                    );
+                }
+                return (
+                    <div key={index} className="ai-response-line">
+                        {line.trim() || <br />}
+                    </div>
+                );
+            });
+        }
+
+        // Handle regular text with paragraphs
+        return response.split('\n\n').map((paragraph, index) => (
+            <p key={index} className="ai-response-paragraph">
+                {paragraph}
+            </p>
+        ));
+    };
+*/
+    useEffect(() => {
+        console.log("AI response data:", data);
+    }, [data]);
+
 
     return (
         <div className="prompt-detail-view">
@@ -143,12 +201,40 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                     >
                         <i className="bi bi-trash"></i> Delete
                     </button>
-                    <button className="btn use-btn">Use This Prompt</button>
-
+                    <button className="btn use-btn" onClick={handleGenerate}>
+                        {isLoading ? 'Generating...' : 'Use This Prompt'}
+                    </button>
                 </div>
             </div>
-        </div>
-    );
-};
-
+                {/* Nowa sekcja dla odpowiedzi AI */}
+                            <div className="ai-response-section">
+                                <h4>AI Response:</h4>
+                                <div className="ai-response-container">
+                                    {isLoading ? (
+                                        <div className="ai-loading">
+                                            <Loader variation="linear" />
+                                            <Text>Generating response...</Text>
+                                        </div>
+                                    ) : (
+                                        <div className="ai-response-wrapper">
+                                            <View className="ai-response-content">
+                                                {data}
+                                            </View>
+                                            {data && (
+                                                <div className="ai-response-actions">
+                                                    <button 
+                                                        className="btn copy-btn small"
+                                                        onClick={() => navigator.clipboard.writeText(data)}
+                                                    >
+                                                        <i className="bi bi-clipboard"></i> Copy Response
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
 export default PromptDetail;

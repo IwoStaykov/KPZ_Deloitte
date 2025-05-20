@@ -3,16 +3,20 @@ import { PromptDetailProps } from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
-    isOpen, onClose, title, tags, description, author, date, usageCount,
-    promptContent, history = [], onEdit,
-    onDelete, selectedPrompt
-}) => {
+                                                       isOpen, onClose, title, tags, description, author, date, usageCount,
+                                                       promptContent, history = [], onEdit,
+                                                       onDelete, selectedPrompt
+                                                   }) => {
     const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const historyMenuRef = useRef<HTMLDivElement>(null);
     const [isCompareMode, setIsCompareMode] = useState(false);
     const [oldContent, setOldContent] = useState('');
     const [newContent, setNewContent] = useState('');
+    const [context, setContext] = useState('');
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatMessages, setChatMessages] = useState<Array<{type: 'system' | 'user' | 'bot', content: string}>>([]);
+    const [userMessage, setUserMessage] = useState('');
 
     useEffect(() => {
         if (selectedVersion !== null && history) {
@@ -21,8 +25,56 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
             setOldContent(selected);
             setNewContent(next);
         }
-      }, [selectedVersion, history, promptContent]);
-      
+    }, [selectedVersion, history, promptContent]);
+
+    useEffect(() => {
+        // Inicjalizacja wiadomości systemowej po otwarciu chatu
+        if (isChatOpen && chatMessages.length === 0) {
+            setChatMessages([
+                {
+                    type: 'system',
+                    content: 'Rozpoczęta nowa konwersacja z wykorzystaniem promptu.'
+                }
+            ]);
+        }
+    }, [isChatOpen, chatMessages.length]);
+
+    // Obsługa kliknięcia poza menu historii, aby je zamknąć
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (historyMenuRef.current && !historyMenuRef.current.contains(event.target as Node)) {
+                setIsHistoryOpen(false);
+            }
+        };
+
+        if (isHistoryOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isHistoryOpen]);
+
+    const handleSendMessage = () => {
+        if (!userMessage.trim()) return;
+
+        // Dodaj wiadomość użytkownika
+        setChatMessages(prev => [...prev, { type: 'user', content: userMessage }]);
+
+        // Symulacja odpowiedzi bota (w rzeczywistości byłoby zapytanie do Bedrock)
+        setTimeout(() => {
+            setChatMessages(prev => [
+                ...prev,
+                {
+                    type: 'bot',
+                    content: `To jest symulowana odpowiedź na: "${userMessage}". W rzeczywistej implementacji, ten tekst zostałby wygenerowany przez Bedrock AI na podstawie promptu i kontekstu.`
+                }
+            ]);
+        }, 1000);
+
+        setUserMessage('');
+    };
 
     if (!isOpen) return null;
 
@@ -31,7 +83,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
         : promptContent;
 
     return (
-        <div className="prompt-detail-view">
+        <div className={`prompt-detail-view ${isChatOpen ? 'with-chat-open' : ''}`}>
             <div className="prompt-detail-header">
                 <h2>{title}</h2>
                 <button className="btn close-btn" onClick={onClose}>
@@ -93,13 +145,36 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                 </div>
             </div>
 
+            {/* Nowa sekcja kontekstu */}
+            <div className="prompt-content-section">
+                <div className="prompt-header">
+                    <h4>Kontekst:</h4>
+                </div>
+                <div className="prompt-content-box" style={{ minHeight: '200px', height: 'auto' }}>
+    <textarea
+        className="prompt-content-box"
+        style={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            background: 'transparent',
+            resize: 'none',
+            outline: 'none'
+        }}
+        value={context}
+        onChange={(e) => setContext(e.target.value)}
+        placeholder="Wprowadź kontekst dla promptu..."
+    ></textarea>
+                </div>
+            </div>
+
             <div className="prompt-actions">
                 {history?.length >= 0 && (
                     <div className="history-dropdown">
                         <button
                             className="btn history-btn"
                             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                            >
+                        >
                             <i className="bi bi-clock-history"></i>
                             {selectedVersion !== null
                                 ? `Wersja ${selectedVersion}`
@@ -137,16 +212,78 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                     <button className="btn edit-btn" onClick={onEdit}>
                         <i className="bi bi-pencil"></i> Edit
                     </button>
-                    <button 
-                        className="btn delete-btn" 
+                    <button
+                        className="btn delete-btn"
                         onClick={() => onDelete(selectedPrompt.id)}
                     >
                         <i className="bi bi-trash"></i> Delete
                     </button>
-                    <button className="btn use-btn">Use This Prompt</button>
-
+                    <button
+                        className="btn use-btn"
+                        onClick={() => setIsChatOpen(true)}
+                    >
+                        <i className="bi bi-chat-text"></i> Use This Prompt
+                    </button>
                 </div>
             </div>
+
+            {/* Panel chatu */}
+            {isChatOpen && (
+                <div className="chat-panel">
+                    <div className="chat-header">
+                        <h3>Konwersacja z Bedrock</h3>
+                        <button className="btn close-btn" onClick={() => setIsChatOpen(false)}>
+                            <i className="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div className="chat-messages">
+                        <div className="message system-message">
+                            <div className="message-content">
+                                Rozpoczęta nowa konwersacja z wykorzystaniem:
+                                <div className="prompt-info-snippet">
+                                    <strong>Prompt:</strong> {promptContent.length > 100
+                                    ? promptContent.substring(0, 100) + '...'
+                                    : promptContent}
+                                    {context && (
+                                        <>
+                                            <br />
+                                            <strong>Kontekst:</strong> {context.length > 100
+                                            ? context.substring(0, 100) + '...'
+                                            : context}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {chatMessages.filter(msg => msg.type !== 'system').map((message, index) => (
+                            <div
+                                key={index}
+                                className={`message ${message.type === 'user' ? 'user-message' : 'bot-message'}`}
+                            >
+                                <div className="message-content">{message.content}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="chat-input-area">
+                        <textarea
+                            className="chat-input"
+                            placeholder="Napisz wiadomość..."
+                            value={userMessage}
+                            onChange={(e) => setUserMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                }
+                            }}
+                        ></textarea>
+                        <button className="btn send-btn" onClick={handleSendMessage}>
+                            <i className="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

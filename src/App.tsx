@@ -6,10 +6,11 @@ import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data'
 //import type { Prompt as PromptType } from './types/interfaces';
-import { useUserSub } from './hooks/useUserSub'; 
+import { useUserSub } from './hooks/useUserSub';
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
-import { useSort } from './hooks/useSort';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 const client = generateClient<Schema>();
@@ -21,22 +22,18 @@ import PromptDetail from './components/PromptDetail';
 import EditPrompt from './components/EditPrompt';
 import FilterPanel from './components/FilterPanel';
 import TeamModal from './components/TeamModal';
-import SortMenu from './components/SortMenu';
 import ProfileMenu from './components/ProfileMenu';
-
 
 // Typy
 import {
-  Prompt,
-  FilterOptions,
-  TeamMember,
-  SidebarCategory,
-  PromptHistoryItem
+    Prompt,
+    FilterOptions,
+    TeamMember,
+    SidebarCategory,
+    PromptHistoryItem
 } from './types/interfaces';
 
 const App: React.FC = () => {
-
-
 
     // Stany
     const [, setError] = useState<string | null>(null);
@@ -79,21 +76,47 @@ const App: React.FC = () => {
     const [allPrompts, setAllPrompts] = useState<Prompt[]>([]); // Wszystkie prompty (do filtrowania)
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState<number>(10);
-    
-    const { sortOption, handleSortChange, sortPrompts } = useSort();
 
+    const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'titleAZ' | 'titleZA'>('newest');
+
+    const handleSortChange = (option: 'newest' | 'oldest' | 'titleAZ' | 'titleZA') => {
+        setSortOption(option);
+        setCurrentPage(0); // Reset do pierwszej strony przy zmianie sortowania
+    };
+
+    // Funkcja pomocnicza dla sortowania (poza komponentem lub jako funkcja nazwana wewnątrz)
+    const sortPromptsByOption = (prompts: Prompt[], option: 'newest' | 'oldest' | 'titleAZ' | 'titleZA') => {
+        return [...prompts].sort((a, b) => {
+            switch (option) {
+                case 'newest':
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
+                case 'oldest':
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
+                case 'titleAZ':
+                    return a.title.localeCompare(b.title);
+                case 'titleZA':
+                    return b.title.localeCompare(a.title);
+                default:
+                    return 0;
+            }
+        });
+    };
+
+// W komponencie App
     const filteredPrompts = useMemo(() => {
+        // Najpierw filtrujemy dane
         const filtered = filterPrompts(allPrompts, searchFilters, selectedCategory);
-        return sortPrompts(filtered);
-      }, [allPrompts, searchFilters, selectedCategory, sortOption]);
-    
+        // Potem sortujemy przefiltrowane dane
+        return sortPromptsByOption(filtered, sortOption);
+    }, [allPrompts, searchFilters, selectedCategory, sortOption]);
+
     const displayedPrompts = useMemo(() => {
         const startIdx = currentPage * pageSize;
         return filteredPrompts.slice(startIdx, startIdx + pageSize);
     }, [filteredPrompts, currentPage, pageSize]);
-    
+
     const totalFilteredCount = filteredPrompts.length;
-    
+
     useEffect(() => {
         console.log("filteredPrompts", filteredPrompts.map(p => p.id));
         console.log("currentPage", currentPage);
@@ -122,9 +145,6 @@ const App: React.FC = () => {
         };
     }, [isFilterPanelVisible]);
 
-
-
-
     const [newPrompt, setNewPrompt] = useState<{
 
         title: string;
@@ -137,10 +157,6 @@ const App: React.FC = () => {
         tags: '',
         content: ''
     });
-
-    
-
-
 
     // Przykładowe dane (ZINTEGORWAĆ Z BAZĄ DANYCH)
     const sidebarCategories: SidebarCategory[] = [
@@ -244,7 +260,7 @@ const App: React.FC = () => {
                     };
                 });
 
-              
+
                 setAllPrompts(transformedPrompts);
             },
             error: (err) => {
@@ -254,11 +270,8 @@ const App: React.FC = () => {
         });
 
         return () => subscription.unsubscribe(); // Wyczyść suba przy odmontowaniu
-    }, []); 
+    }, []);
 
-    
-      
-    
     // Efekty
     useEffect(() => {
         // Sprawdź zapisany motyw
@@ -290,34 +303,13 @@ const App: React.FC = () => {
         }
         // Uruchom ponownie, gdy zmieni się lista pobranych promptów LUB gdy zmieni się ID wybranego promptu
     }, [allPrompts, selectedPrompt?.id]); // Dodano selectedPrompt?.id jako zależność
-    
+
     useEffect(() => {
         if (selectedPrompt) {
             const updatedPrompt = allPrompts.find(p => p.id === selectedPrompt.id);
             if (updatedPrompt) setSelectedPrompt(updatedPrompt);
         }
     }, [allPrompts]);
-
-    // // Obsługa kliknięcia poza menu profilu
-    // useEffect(() => {
-    //     const handleClickOutside = (event: MouseEvent) => {
-    //         const target = event.target as Node | null;
-    //         if (!target) return;
-
-    //         const profileMenuContainer = document.querySelector('.profile-menu-container');
-    //         if (isProfileMenuOpen && profileMenuContainer && !profileMenuContainer.contains(target)) {
-    //             setIsProfileMenuOpen(false);
-    //         }
-    //     };
-
-    //     if (isProfileMenuOpen) {
-    //         document.addEventListener('mousedown', handleClickOutside);
-    //     }
-
-    //     return () => {
-    //         document.removeEventListener('mousedown', handleClickOutside);
-    //     };
-    // }, [isProfileMenuOpen]);
 
     // Efekt inicjalizujący dane zespołu
     useEffect(() => {
@@ -346,23 +338,35 @@ const App: React.FC = () => {
 
     // Obsługa menu bocznego
     const toggleSidebar = () => {
-        if (!isSidebarVisible) {
-            // Jeśli pasek jest niewidoczny, najpierw go pokazujemy
-            setIsSidebarVisible(true);
-        } else {
-            // Jeśli pasek jest już widoczny, możemy go schować
-            setIsSidebarVisible(false);
-        }
+        // Czytelniejsze i prostsze przełączanie stanu
+        setIsSidebarVisible(prevState => !prevState);
     };
 
     // Pokaż pasek boczny
-    const showSidebar = () => {
-        setIsSidebarVisible(true);
-    };
+    //const showSidebar = () => {
+    //    setIsSidebarVisible(true);
+    //};
 
     // Obsługa kliknięcia w logo
+    //const handleLogoClick = () => {
+    //    showSidebar();
+    //};
+
+    // Obsługa kliknięcia w logo - powrót do widoku głównego
     const handleLogoClick = () => {
-        showSidebar();
+        // Zamknij wszystkie otwarte modale i widoki szczegółowe
+        setIsPromptDetailOpen(false);
+        setIsCreatePromptOpen(false);
+        setIsEditPromptOpen(false);
+        setIsTeamModalOpen(false);
+        setIsFilterPanelVisible(false);
+
+        // Resetuj wybrane prompty
+        setSelectedPrompt(null);
+        setEditingPrompt(null);
+
+        // Resetuj stronę do pierwszej
+        setCurrentPage(0);
     };
 
     // Obsługa kliknięcia w element menu
@@ -403,6 +407,12 @@ const App: React.FC = () => {
 
     // Obsługa otwierania formularza nowego promptu
     const openCreatePrompt = () => {
+
+        // Zamknij inne modale, jeśli są otwarte
+        if (isEditPromptOpen) setIsEditPromptOpen(false);
+        if (isTeamModalOpen) setIsTeamModalOpen(false);
+        if (isPromptDetailOpen) setIsPromptDetailOpen(false);
+
         setIsCreatePromptOpen(true);
     };
 
@@ -431,7 +441,7 @@ const App: React.FC = () => {
     const handleSavePrompt = async () => {
 
         if (!userSub) {
-            alert('Nie można zapisać promptu – brak identyfikatora użytkownika.');
+            toast.error('Nie można zapisać promptu – brak identyfikatora użytkownika.');
             return;
         }
         const userName = (await getUserName()) as string;
@@ -446,9 +456,8 @@ const App: React.FC = () => {
             creationDate: new Date().toISOString(),
             lastModifiedDate: new Date().toISOString()
         });
-        alert('Prompt został zapisany!');
         console.log(userSub);
-        
+
         closeCreatePrompt();
     };
 
@@ -463,115 +472,111 @@ const App: React.FC = () => {
 
     const handleSaveEditedPrompt = async (editedPromptData: any) => {
         if (!editingPrompt) return;
-      
-        try {
-          const tagsArray = typeof editedPromptData.tags === 'string'
-            ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
-            : [...(editedPromptData.tags || [])];
-      
-          const now = new Date().toISOString();
-      
-          // 0. Zapis oryginalnego promptu jako wersji 1
-          if (!editingPrompt.history || editingPrompt.history.length === 0) {
-            await client.models.Version.create({
-                content: editingPrompt.promptContent,
-                versionNumber: "1",
-                creationDate: new Date().toISOString(),
-                promptId: editingPrompt.id
-            });
-          }
 
-          // 1. Aktualizacja głównego Prompt
-          const updatedPromptResult = await client.models.Prompt.update({
-            id: editingPrompt.id,
-            title: editedPromptData.title,
-            description: editedPromptData.description,
-            content: editedPromptData.promptContent,
-            tags: tagsArray,
-            lastModifiedDate: now,
-          });
-      
-          const updatedPrompt = updatedPromptResult.data;
-      
-          if (!updatedPrompt) {
-            console.error("Błąd aktualizacji prompta.");
-            alert("Nie udało się zapisać zmian.");
-            return;
-          }
-      
-          // 2. Tworzenie nowej wersji prompta
-          const versionNumber = String((editingPrompt.history?.length || 1) + 1);
-      
-          const newVersionResult = await client.models.Version.create({
-            promptId: updatedPrompt.id,
-            content: editedPromptData.promptContent,
-            versionNumber,
-            creationDate: now,
-          });
-      
-          const newVersion = newVersionResult.data;
-      
-          if (newVersion) {
-            await client.models.Prompt.update({
-              id: updatedPrompt.id,
-              latestVersionId: newVersion.id,
-            });
-          }
-      
-          // 3. Pobranie pełnych danych prompta + wersji
-          const promptListResult = await client.models.Prompt.list({
-            filter: { id: { eq: updatedPrompt.id } },
-          });
-          
-          const refreshed = promptListResult.data?.[0];
-          
-          const versionsResult = await refreshed.versions(); // <- to jest funkcja
-          const versions = versionsResult.data ?? [];
-      
-          const history: PromptHistoryItem[] = [...versions]
-            .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
-            .map((v) => ({
-              version: parseInt(v.versionNumber),
-              date: new Date(v.creationDate).toLocaleDateString(),
-              changes: `Wersja ${v.versionNumber}`,
-              content: v.content,
-            }));
-      
-          setSelectedPrompt({
-            id: refreshed.id,
-            title: refreshed.title,
-            description: refreshed.description || '',
-            tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
-            author: refreshed.authorName,
-            date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
-            usageCount: 0,
-            promptContent: refreshed.content,
-            history,
-          });
-      
-          alert("Zapisano zmiany i utworzono nową wersję!");
-          setIsEditPromptOpen(false);
-          setIsPromptDetailOpen(true);
-        } catch (error) {
-          console.error("Błąd podczas zapisywania edytowanego prompta:", error);
-          alert("Wystąpił błąd przy zapisie zmian.");
-        }
-      };
-      
-      
-      
-    
-    const handleDeletePrompt = async (promptId: string) => {
-        if (window.confirm('Czy na pewno chcesz usunąć ten prompt?')) {
-            try {
-                await client.models.Prompt.delete({ id: promptId });
-                setAllPrompts(prev => prev.filter(p => p.id !== promptId));
-                setIsPromptDetailOpen(false);
-                alert('Prompt usunięty!');
-            } catch (error) {
-                console.error('Błąd usuwania:', error);
-                alert('Błąd podczas usuwania');
+        try {
+            const tagsArray = typeof editedPromptData.tags === 'string'
+                ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+                : [...(editedPromptData.tags || [])];
+
+            const now = new Date().toISOString();
+
+            // 0. Zapis oryginalnego promptu jako wersji 1
+            if (!editingPrompt.history || editingPrompt.history.length === 0) {
+                await client.models.Version.create({
+                    content: editingPrompt.promptContent,
+                    versionNumber: "1",
+                    creationDate: new Date().toISOString(),
+                    promptId: editingPrompt.id
+                });
             }
+
+            // 1. Aktualizacja głównego Prompt
+            const updatedPromptResult = await client.models.Prompt.update({
+                id: editingPrompt.id,
+                title: editedPromptData.title,
+                description: editedPromptData.description,
+                content: editedPromptData.promptContent,
+                tags: tagsArray,
+                lastModifiedDate: now,
+            });
+
+            const updatedPrompt = updatedPromptResult.data;
+
+            if (!updatedPrompt) {
+                console.error("Błąd aktualizacji prompta.");
+                toast.error("Nie udało się zapisać zmian.");
+                return;
+            }
+
+            // 2. Tworzenie nowej wersji prompta
+            const versionNumber = String((editingPrompt.history?.length || 1) + 1);
+
+            const newVersionResult = await client.models.Version.create({
+                promptId: updatedPrompt.id,
+                content: editedPromptData.promptContent,
+                versionNumber,
+                creationDate: now,
+            });
+
+            const newVersion = newVersionResult.data;
+
+            if (newVersion) {
+                await client.models.Prompt.update({
+                    id: updatedPrompt.id,
+                    latestVersionId: newVersion.id,
+                });
+            }
+
+            // 3. Pobranie pełnych danych prompta + wersji
+            const promptListResult = await client.models.Prompt.list({
+                filter: { id: { eq: updatedPrompt.id } },
+            });
+
+            const refreshed = promptListResult.data?.[0];
+
+            const versionsResult = await refreshed.versions(); // <- to jest funkcja
+            const versions = versionsResult.data ?? [];
+
+            const history: PromptHistoryItem[] = [...versions]
+                .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
+                .map((v) => ({
+                    version: parseInt(v.versionNumber),
+                    date: new Date(v.creationDate).toLocaleDateString(),
+                    changes: `Wersja ${v.versionNumber}`,
+                    content: v.content,
+                }));
+
+            setSelectedPrompt({
+                id: refreshed.id,
+                title: refreshed.title,
+                description: refreshed.description || '',
+                tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
+                author: refreshed.authorName,
+                date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
+                usageCount: 0,
+                promptContent: refreshed.content,
+                history,
+            });
+
+            //alert("Zapisano zmiany i utworzono nową wersję!");
+            setIsEditPromptOpen(false);
+            setIsPromptDetailOpen(true);
+        } catch (error) {
+            console.error("Błąd podczas zapisywania edytowanego prompta:", error);
+            alert("Wystąpił błąd przy zapisie zmian.");
+        }
+    };
+
+
+    const handleDeletePrompt = async (promptId: string) => {
+        try {
+            await client.models.Prompt.delete({ id: promptId });
+            setAllPrompts(prev => prev.filter(p => p.id !== promptId));
+            setIsPromptDetailOpen(false);
+            toast.success('Prompt usunięty');
+        } catch (error) {
+            console.error('Błąd usuwania:', error);
+            toast.error('Błąd podczas usuwania');
         }
     };
 
@@ -637,7 +642,7 @@ const App: React.FC = () => {
         const filterDateFrom = options.dateFrom !== undefined ? options.dateFrom : searchFilters.dateFrom;
         const filterDateTo = options.dateTo !== undefined ? options.dateTo : searchFilters.dateTo;
         const filterCategory = options.category !== undefined ? options.category : selectedCategory;
-      
+
         const updatedFilters = {
             query: filterQuery,
             author: filterAuthor,
@@ -645,13 +650,13 @@ const App: React.FC = () => {
             dateFrom: filterDateFrom,
             dateTo: filterDateTo
         };
-      
+
         setSearchFilters(updatedFilters);
         setSelectedCategory(filterCategory);
         setCurrentPage(0);
-      
+
         if (options.closePanel) {
-          setIsFilterPanelVisible(false);
+            setIsFilterPanelVisible(false);
         }
     };
 
@@ -661,7 +666,9 @@ const App: React.FC = () => {
             if (!target) return;
 
             // Sprawdzamy, czy kliknięcie jest na overlay (tle) modalu, a nie na treści
-            if ((target as Element).classList?.contains('modal-overlay')) {
+            // i nie jest to kliknięcie w przycisk zamknięcia (co wywołałoby podwójne zamknięcie)
+            if ((target as Element).classList?.contains('modal-overlay') &&
+                !(target as Element).closest('.close-btn')) {
                 // Dla modala tworzenia promptu
                 if (isCreatePromptOpen) {
                     closeCreatePrompt();
@@ -715,7 +722,7 @@ const App: React.FC = () => {
         setIsFilterPanelVisible(prev => !prev);
     };
 
-    
+
 
     // Określenie klasy dla sidebar
     const sidebarClasses = `sidebar ${isSidebarVisible ? 'visible' : ''}`;
@@ -816,9 +823,8 @@ const App: React.FC = () => {
                         <button className="btn create-prompt-btn" onClick={openCreatePrompt}>
                             <i className="bi bi-plus-lg"></i> Create New
                         </button>
-
                         {/* Przycisk do otwierania menu profilu */}
-                        <ProfileMenu signOut={signOut} />
+                        <ProfileMenu signOut={signOut} isDarkTheme={isDarkTheme} />
                     </div>
                 </div>
 
@@ -891,68 +897,89 @@ const App: React.FC = () => {
                                 )}
                             </div>
 
-                            <div className="sort-controls">
-                                <SortMenu 
-                                    currentSort={sortOption} 
-                                    onSortChange={handleSortChange} 
-                                />
+                            <div className="sort-controls d-flex">
+                                <button
+                                    className={`btn category-btn me-2 ${sortOption === 'newest' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('newest')}
+                                >
+                                    Od najnowszych
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${sortOption === 'titleAZ' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('titleAZ')}
+                                >
+                                    Tytuł A-Z
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${sortOption === 'titleZA' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('titleZA')}
+                                >
+                                    Tytuł Z-A
+                                </button>
+                                <button
+                                    className={`btn category-btn ${sortOption === 'oldest' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('oldest')}
+                                >
+                                    Od najstarszych
+                                </button>
                             </div>
                         </div>
                         <div className="row g-4">
                             {filteredPrompts.length > 0 ? (
                                 <>
-                                {displayedPrompts.map((prompt) => (
-                                    <div className="col-lg-4 col-md-6" key={prompt.id}>
-                                    <PromptCard
-                                        title={prompt.title}
-                                        description={prompt.description}
-                                        tags={prompt.tags}
-                                        author={prompt.author}
-                                        date={prompt.date}
-                                        onClick={() => handlePromptClick(prompt)}
-                                    />
-                                    </div>
-                                ))}
-                                
-                                <div className="col-12 mt-4 position-relative">
-                                    {/* Paginacja - wyśrodkowana */}
-                                    <div className="d-flex justify-content-center">
-                                        <Pagination
-                                            currentPage={currentPage + 1}
-                                            totalPages={Math.ceil(totalFilteredCount / pageSize)}
-                                            onNext={() => setCurrentPage(prev => prev + 1)}
-                                            onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                            onChange={(newPageIndex?: number) => {
-                                                if (newPageIndex !== undefined) {
-                                                    setCurrentPage(newPageIndex - 1);
-                                                }
-                                            }}
-                                            siblingCount={1}
-                                        />
-                                    </div>
-                                    
-                                    {/* Selektor - w prawym rogu */}
-                                    <div className="position-absolute end-0 top-0">
-                                        <div className="page-size-selector d-flex align-items-center">
-                                            <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
-                                            <select 
-                                                id="page-size"
-                                                className="form-select form-select-sm"
-                                                value={pageSize}
-                                                onChange={(e) => {
-                                                    setPageSize(Number(e.target.value));
-                                                    setCurrentPage(0);
+                                    {displayedPrompts.map((prompt) => (
+                                        <div className="col-lg-4 col-md-6" key={prompt.id}>
+                                            <PromptCard
+                                                title={prompt.title}
+                                                description={prompt.description}
+                                                tags={prompt.tags}
+                                                author={prompt.author}
+                                                date={prompt.date}
+                                                onClick={() => handlePromptClick(prompt)}
+                                            />
+                                        </div>
+                                    ))}
+
+                                    <div className="col-12 mt-4 position-relative">
+                                        {/* Paginacja - wyśrodkowana */}
+                                        <div className="d-flex justify-content-center">
+                                            <Pagination
+                                                currentPage={currentPage + 1}
+                                                totalPages={Math.ceil(totalFilteredCount / pageSize)}
+                                                onNext={() => setCurrentPage(prev => prev + 1)}
+                                                onPrevious={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                                onChange={(newPageIndex?: number) => {
+                                                    if (newPageIndex !== undefined) {
+                                                        setCurrentPage(newPageIndex - 1);
+                                                    }
                                                 }}
-                                                style={{width: 'auto'}}
-                                            >
-                                                <option value="5">5</option>
-                                                <option value="10">10</option>
-                                                <option value="20">20</option>
-                                                <option value="50">50</option>
-                                            </select>
+                                                siblingCount={1}
+                                                className="custom-pagination"
+                                            />
+                                        </div>
+
+                                        {/* Selektor - w prawym rogu */}
+                                        <div className="position-absolute end-0 top-0">
+                                            <div className="page-size-selector d-flex align-items-center">
+                                                <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                                <select
+                                                    id="page-size"
+                                                    className="form-select form-select-sm"
+                                                    value={pageSize}
+                                                    onChange={(e) => {
+                                                        setPageSize(Number(e.target.value));
+                                                        setCurrentPage(0);
+                                                    }}
+                                                    style={{width: 'auto'}}
+                                                >
+                                                    <option value="5">5</option>
+                                                    <option value="10">10</option>
+                                                    <option value="20">20</option>
+                                                    <option value="50">50</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
                                 </>
                             ) : (
                                 <div className="col-12 text-center py-5">
@@ -1072,14 +1099,26 @@ const App: React.FC = () => {
 
             {/* Dodanie modalu zespołu do renderowania */}
             {isTeamModalOpen && (
-            <TeamModal
-                isOpen={isTeamModalOpen}
-                onClose={handleCloseTeamModal}
-                members={teamMembers}
-                teamPrompts={teamPrompts}
-                currentUserRole={currentUserRole}
+                <TeamModal
+                    isOpen={isTeamModalOpen}
+                    onClose={handleCloseTeamModal}
+                    members={teamMembers}
+                    teamPrompts={teamPrompts}
+                    currentUserRole={currentUserRole}
+                />
+            )}
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss={false}
+                draggable
+                pauseOnHover
+                theme={isDarkTheme ? "dark" : "light"}
             />
-        )}
         </div>
     );
 };

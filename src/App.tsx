@@ -113,9 +113,10 @@ const App: React.FC = () => {
     }, [allPrompts, searchFilters, selectedCategory, sortOption]);
 
     const displayedPrompts = useMemo(() => {
+        if (isLoadingPrompts) return [];
         const startIdx = currentPage * pageSize;
         return filteredPrompts.slice(startIdx, startIdx + pageSize);
-    }, [filteredPrompts, currentPage, pageSize]);
+    }, [filteredPrompts, currentPage, pageSize,isLoadingPrompts]);
 
     const totalFilteredCount = filteredPrompts.length;
 
@@ -235,6 +236,10 @@ const App: React.FC = () => {
             ]
         }).subscribe({
             next: ({ items }) => {
+                if (!items) {
+                    setIsLoadingPrompts(false);
+                    return;
+                }
                 const transformedPrompts: Prompt[] = items.map((p: any) => {
                     const id = p.id
                     const versions = p.versions?.items || [];

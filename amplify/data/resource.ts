@@ -1,5 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-import { FileSystemType } from "aws-cdk-lib/aws-ecs";
+
 
 const schema = a.schema({
   Prompt: a

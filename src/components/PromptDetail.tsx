@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PromptDetailProps } from '../types/interfaces';
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
+import { useAIConversation } from '../client';
+import { AIConversation } from '@aws-amplify/ui-react-ai';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({
                                                        isOpen, onClose, title, tags, description, author, date, usageCount,
@@ -27,6 +29,9 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
         }
     }, [selectedVersion, history, promptContent]);
 
+    
+    
+    const [{data: { messages },isLoading,},handleSendMessage,] = useAIConversation('chatAssistant');
     useEffect(() => {
         // Inicjalizacja wiadomości systemowej po otwarciu chatu
         if (isChatOpen && chatMessages.length === 0) {
@@ -56,6 +61,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
         };
     }, [isHistoryOpen]);
 
+    /*
     const handleSendMessage = () => {
         if (!userMessage.trim()) return;
 
@@ -75,9 +81,10 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
 
         setUserMessage('');
     };
+    */
 
     if (!isOpen) return null;
-
+    
     const displayContent = selectedVersion !== null && history
         ? history.find(item => item.version === selectedVersion)?.content || promptContent
         : promptContent;
@@ -274,13 +281,20 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
-                                    handleSendMessage();
+                                    //handleSendMessage();
                                 }
                             }}
                         ></textarea>
-                        <button className="btn send-btn" onClick={handleSendMessage}>
+                        <button className="btn send-btn" >
                             <i className="bi bi-arrow-right"></i>
                         </button>
+                    </div>
+                    <div>
+                        <AIConversation
+                            messages={messages}
+                            isLoading={isLoading}
+                            handleSendMessage={handleSendMessage}
+                        />
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { FileSystemType } from "aws-cdk-lib/aws-ecs";
 
 const schema = a.schema({
   Prompt: a
@@ -46,6 +47,12 @@ const schema = a.schema({
       allow.authenticated().to(['read']) // Dla zalogowanych użytkowników
     ])
     .identifier(['userId', 'promptId']),
+
+    chatAssistant: a.conversation({
+      aiModel: a.ai.model('Amazon Nova Pro'),
+      systemPrompt: 'You are a helpful assistant.',
+    })
+    .authorization((allow) => allow.owner()),
 });
 
 export type Schema = ClientSchema<typeof schema>;

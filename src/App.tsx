@@ -2,18 +2,15 @@ import React, {useState, useEffect, useRef, useMemo} from 'react';
 import './App.css';
 import { initialTeamMembers } from './data/mockPrompts';
 import { filterPrompts } from './utils/filterUtils';
-import type { Schema } from '../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { generateClient } from 'aws-amplify/data'
 //import type { Prompt as PromptType } from './types/interfaces';
 import { useUserSub } from './hooks/useUserSub';
 import { Pagination } from '@aws-amplify/ui-react';
 import { getUserName } from './utils/client-utils';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { client } from './client';
 
-
-const client = generateClient<Schema>();
 //console.log("Amplify Config:", client.config);
 
 // Komponenty

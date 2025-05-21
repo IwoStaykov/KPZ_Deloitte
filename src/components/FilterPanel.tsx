@@ -52,9 +52,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
     return (
         <div className="filter-panel">
             <div className="filter-header">
-                <h4>Filtry wyszukiwania</h4>
+                <h4>Search Filters</h4>
                 <button className="btn reset-btn" onClick={onReset}>
-                    <i className="bi bi-x-circle"></i> Resetuj
+                    <i className="bi bi-x-circle"></i> Reset
                 </button>
             </div>
             <div className="filter-body">
@@ -66,7 +66,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                         name="query"
                         className="form-control"
                         defaultValue={filters.query}
-                        placeholder="Wyszukaj po query..."
+                        placeholder="Search by query..."
                     />
                 </div>
                 <div className="filter-group">
@@ -77,7 +77,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                         name="author"
                         className="form-control"
                         defaultValue={filters.author}
-                        placeholder="Wyszukaj po autorze..."
+                        placeholder="Search by author..."
                     />
                 </div>
                 <div className="filter-group">
@@ -88,11 +88,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                         name="tag"
                         className="form-control"
                         defaultValue={filters.tag}
-                        placeholder="Wyszukaj po tagu..."
+                        placeholder="Search by tag..."
                     />
                 </div>
                 <div className="filter-group">
-                    <label htmlFor="filter-dateFrom">Data od:</label>
+                    <label htmlFor="filter-dateFrom">Date from:</label>
                     <input
                         type="date"
                         id="filter-dateFrom"
@@ -104,7 +104,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
                     />
                 </div>
                 <div className="filter-group">
-                    <label htmlFor="filter-dateTo">Data do:</label>
+                    <label htmlFor="filter-dateTo">Date to:</label>
                     <input
                         type="date"
                         id="filter-dateTo"
@@ -118,7 +118,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onReset, onApply, is
             </div>
             <div className="filter-footer">
                 <button className="btn apply-btn" onClick={handleApply}>
-                    <i className="bi bi-check-circle"></i> Zastosuj filtry
+                    <i className="bi bi-check-circle"></i> Apply Filters
                 </button>
             </div>
         </div>

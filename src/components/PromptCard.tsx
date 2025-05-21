@@ -17,7 +17,7 @@ const PromptCard: React.FC<PromptCardProps> = ({ title, description, tags, autho
             </div>
             <div className="card-footer py-3">
                 <small className="text-muted">
-                    By {author} • {new Date(date).toLocaleDateString("pl-PL", {
+                    By {author} • {new Date(date).toLocaleDateString("en-US", {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'

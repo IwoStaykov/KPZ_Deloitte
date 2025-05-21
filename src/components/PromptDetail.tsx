@@ -15,13 +15,16 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
     const [newContent, setNewContent] = useState('');
 
     useEffect(() => {
-        if (selectedVersion !== null && history) {
-            const selected = history.find(item => item.version === selectedVersion)?.content || '';
-            const next = history.find(item => item.version === selectedVersion + 1)?.content || promptContent;
-            setOldContent(selected);
-            setNewContent(next);
-        }
-      }, [selectedVersion, history, promptContent]);
+        if (!isOpen || !history || history.length === 0) return;
+
+        const initialVersion = history[0]; // Najnowsza wersja
+
+        const nextContent = promptContent; // Aktualna treść
+
+        setSelectedVersion(initialVersion.version);
+        setOldContent(initialVersion.content);
+        setNewContent(nextContent);
+    }, [isOpen, history, promptContent]);
       
 
     if (!isOpen) return null;

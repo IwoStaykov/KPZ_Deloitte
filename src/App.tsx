@@ -394,10 +394,54 @@ const App: React.FC = () => {
     };
 
     // Obsługa kliknięcia w prompt
-    const handlePromptClick = (prompt: Prompt) => {
-        setSelectedPrompt(prompt);
-        setIsPromptDetailOpen(true);
-    };
+    const handlePromptClick = async (prompt: Prompt) => {
+  try {
+    // 1. Pobierz najnowsze dane prompta z bazy
+    const promptListResult = await client.models.Prompt.list({
+      filter: { id: { eq: prompt.id } }
+    });
+
+    const fetched = promptListResult.data?.[0];
+
+    if (!fetched) {
+      console.error("Nie znaleziono prompta.");
+      return;
+    }
+
+    // 2. Pobierz powiązane wersje
+    const versionsResult = await fetched.versions();
+    const versions = versionsResult.data ?? [];
+
+    // 3. Utwórz historię
+    const history: PromptHistoryItem[] = versions
+      .map((v) => ({
+        version: parseInt(v.versionNumber),
+        date: new Date(v.creationDate).toISOString(),
+        changes: `Wersja ${v.versionNumber}`,
+        content: v.content,
+      }))
+      .sort((a, b) => b.version - a.version); // od najnowszej do najstarszej
+
+    // 4. Ustaw wybrany prompt z historią
+    setSelectedPrompt({
+      id: fetched.id,
+      title: fetched.title,
+      description: fetched.description || '',
+      tags: fetched.tags?.filter((tag): tag is string => tag !== null) ?? [],
+      author: fetched.authorName,
+      date: new Date(fetched.lastModifiedDate).toLocaleDateString(),
+      usageCount: 0,
+      promptContent: fetched.content,
+      history,
+    });
+
+    setIsPromptDetailOpen(true);
+  } catch (error) {
+    console.error("Błąd przy otwieraniu prompta:", error);
+  }
+};
+
+
 
 
 
@@ -462,101 +506,113 @@ const App: React.FC = () => {
     };
 
     const handleSaveEditedPrompt = async (editedPromptData: any) => {
-        if (!editingPrompt) return;
-      
-        try {
-          const tagsArray = typeof editedPromptData.tags === 'string'
-            ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
-            : [...(editedPromptData.tags || [])];
-      
-          const now = new Date().toISOString();
-      
-          // 0. Zapis oryginalnego promptu jako wersji 1
-          if (!editingPrompt.history || editingPrompt.history.length === 0) {
-            await client.models.Version.create({
-                content: editingPrompt.promptContent,
-                versionNumber: "1",
-                creationDate: new Date().toISOString(),
-                promptId: editingPrompt.id
-            });
-          }
+  if (!editingPrompt) return;
 
-          // 1. Aktualizacja głównego Prompt
-          const updatedPromptResult = await client.models.Prompt.update({
-            id: editingPrompt.id,
-            title: editedPromptData.title,
-            description: editedPromptData.description,
-            content: editedPromptData.promptContent,
-            tags: tagsArray,
-            lastModifiedDate: now,
-          });
-      
-          const updatedPrompt = updatedPromptResult.data;
-      
-          if (!updatedPrompt) {
-            console.error("Błąd aktualizacji prompta.");
-            alert("Nie udało się zapisać zmian.");
-            return;
-          }
-      
-          // 2. Tworzenie nowej wersji prompta
-          const versionNumber = String((editingPrompt.history?.length || 1) + 1);
-      
-          const newVersionResult = await client.models.Version.create({
-            promptId: updatedPrompt.id,
-            content: editedPromptData.promptContent,
-            versionNumber,
-            creationDate: now,
-          });
-      
-          const newVersion = newVersionResult.data;
-      
-          if (newVersion) {
-            await client.models.Prompt.update({
-              id: updatedPrompt.id,
-              latestVersionId: newVersion.id,
-            });
-          }
-      
-          // 3. Pobranie pełnych danych prompta + wersji
-          const promptListResult = await client.models.Prompt.list({
-            filter: { id: { eq: updatedPrompt.id } },
-          });
-          
-          const refreshed = promptListResult.data?.[0];
-          
-          const versionsResult = await refreshed.versions(); // <- to jest funkcja
-          const versions = versionsResult.data ?? [];
-      
-          const history: PromptHistoryItem[] = [...versions]
-            .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
-            .map((v) => ({
-              version: parseInt(v.versionNumber),
-              date: new Date(v.creationDate).toLocaleDateString(),
-              changes: `Wersja ${v.versionNumber}`,
-              content: v.content,
-            }));
-      
-          setSelectedPrompt({
-            id: refreshed.id,
-            title: refreshed.title,
-            description: refreshed.description || '',
-            tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
-            author: refreshed.authorName,
-            date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
-            usageCount: 0,
-            promptContent: refreshed.content,
-            history,
-          });
-      
-          alert("Zapisano zmiany i utworzono nową wersję!");
-          setIsEditPromptOpen(false);
-          setIsPromptDetailOpen(true);
-        } catch (error) {
-          console.error("Błąd podczas zapisywania edytowanego prompta:", error);
-          alert("Wystąpił błąd przy zapisie zmian.");
-        }
-      };
+  try {
+    const tagsArray = typeof editedPromptData.tags === 'string'
+      ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+      : [...(editedPromptData.tags || [])];
+
+    const now = new Date().toISOString();
+
+    // 🔍 Pobierz istniejące wersje prompta z bazy
+    const versionsResult = await client.models.Version.list({
+      filter: { promptId: { eq: editingPrompt.id } },
+    });
+
+    const existingVersions = versionsResult.data ?? [];
+
+    // Sprawdź, czy trzeba utworzyć oryginalną wersję
+    if (existingVersions.length === 0) {
+      await client.models.Version.create({
+        content: editingPrompt.promptContent,
+        versionNumber: "1",
+        creationDate: now,
+        promptId: editingPrompt.id,
+      });
+    }
+
+    // Ustal kolejny numer wersji
+    const maxVersionNumber = existingVersions.reduce((max, v) => {
+      const num = parseInt(v.versionNumber);
+      return isNaN(num) ? max : Math.max(max, num);
+    }, 1);
+
+    const newVersionNumber = String(maxVersionNumber + 1);
+
+    // Zaktualizuj główny prompt
+    const updatedPromptResult = await client.models.Prompt.update({
+      id: editingPrompt.id,
+      title: editedPromptData.title,
+      description: editedPromptData.description,
+      content: editedPromptData.promptContent,
+      tags: tagsArray,
+      lastModifiedDate: now,
+    });
+
+    const updatedPrompt = updatedPromptResult.data;
+
+    if (!updatedPrompt) {
+      console.error("Błąd aktualizacji prompta.");
+      alert("Nie udało się zapisać zmian.");
+      return;
+    }
+
+    // Utwórz nową wersję
+    const newVersionResult = await client.models.Version.create({
+      promptId: updatedPrompt.id,
+      content: editedPromptData.promptContent,
+      versionNumber: newVersionNumber,
+      creationDate: now,
+    });
+
+    const newVersion = newVersionResult.data;
+
+    if (newVersion) {
+      await client.models.Prompt.update({
+        id: updatedPrompt.id,
+        latestVersionId: newVersion.id,
+      });
+    }
+
+    // Odswież dane prompta i jego wersje
+    const promptListResult = await client.models.Prompt.list({
+      filter: { id: { eq: updatedPrompt.id } },
+    });
+
+    const refreshed = promptListResult.data?.[0];
+    const refreshedVersionsResult = await refreshed.versions();
+    const refreshedVersions = refreshedVersionsResult.data ?? [];
+
+    const history: PromptHistoryItem[] = [...refreshedVersions]
+      .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
+      .map((v) => ({
+        version: parseInt(v.versionNumber),
+        date: new Date(v.creationDate).toISOString(),
+        changes: `Wersja ${v.versionNumber}`,
+        content: v.content,
+      }));
+
+    setSelectedPrompt({
+      id: refreshed.id,
+      title: refreshed.title,
+      description: refreshed.description || '',
+      tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
+      author: refreshed.authorName,
+      date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
+      usageCount: 0,
+      promptContent: refreshed.content,
+      history,
+    });
+
+    setIsEditPromptOpen(false);
+    setIsPromptDetailOpen(true);
+  } catch (error) {
+    console.error("Błąd podczas zapisywania edytowanego prompta:", error);
+    alert("Wystąpił błąd przy zapisie zmian.");
+  }
+};
+
       
       
       

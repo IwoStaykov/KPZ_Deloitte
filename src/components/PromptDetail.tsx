@@ -36,7 +36,7 @@ const PromptDetail: React.FC<PromptDetailProps> = ({
     const [{ data, isLoading}, TestPrompt] = useAIGeneration("TestPrompt");
     const handleGenerate = async () => {
         console.log("Sending prompt:", testPromptContent);        
-        TestPrompt({ testPromptContent});
+        TestPrompt({ testPromptContent });
         console.log("AI response data:", data);
     };
 

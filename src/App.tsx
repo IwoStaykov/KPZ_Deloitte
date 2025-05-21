@@ -176,7 +176,7 @@ const App: React.FC = () => {
             items: [
                 { label: 'Team Members', path: '/team/members' },
                 { label: 'Team Prompts', path: '/team/prompts' },
-                { label: 'Alter Members', path: '/team/add' }
+                { label: 'Manage Members', path: '/team/add' }
             ]
         },
         {
@@ -273,7 +273,7 @@ const App: React.FC = () => {
             },
             error: (err) => {
                 console.error("Błąd observeQuery:", err);
-                setError("Nie udało się połączyć z bazą danych.");
+                setError("Failed to connect to the database.");
                 setIsLoadingPrompts(false);
             }
         });
@@ -450,7 +450,7 @@ const App: React.FC = () => {
     const handleSavePrompt = async () => {
 
         if (!userSub) {
-            toast.error('Nie można zapisać promptu – brak identyfikatora użytkownika.');
+            toast.error('Cannot save prompt – user ID is missing.');
             return;
         }
         const userName = (await getUserName()) as string;
@@ -513,7 +513,7 @@ const App: React.FC = () => {
 
             if (!updatedPrompt) {
                 console.error("Błąd aktualizacji prompta.");
-                toast.error("Nie udało się zapisać zmian.");
+                toast.error("Failed to save changes.");
                 return;
             }
 
@@ -550,8 +550,8 @@ const App: React.FC = () => {
                 .sort((a, b) => parseInt(b.versionNumber) - parseInt(a.versionNumber))
                 .map((v) => ({
                     version: parseInt(v.versionNumber),
-                    date: new Date(v.creationDate).toLocaleDateString(),
-                    changes: `Wersja ${v.versionNumber}`,
+                    date: new Date(v.creationDate).toLocaleDateString("en-US"),
+                    changes: `Version  ${v.versionNumber}`,
                     content: v.content,
                 }));
 
@@ -567,12 +567,12 @@ const App: React.FC = () => {
                 history,
             });
 
-            //alert("Zapisano zmiany i utworzono nową wersję!");
+            toast.success("Changes saved and a new version created!");
             setIsEditPromptOpen(false);
             setIsPromptDetailOpen(true);
         } catch (error) {
             console.error("Błąd podczas zapisywania edytowanego prompta:", error);
-            alert("Wystąpił błąd przy zapisie zmian.");
+            toast.error("An error occurred while saving changes.");
         }
     };
 
@@ -582,10 +582,10 @@ const App: React.FC = () => {
             await client.models.Prompt.delete({ id: promptId });
             setAllPrompts(prev => prev.filter(p => p.id !== promptId));
             setIsPromptDetailOpen(false);
-            toast.success('Prompt usunięty');
+            toast.success('Prompt deleted');
         } catch (error) {
             console.error('Błąd usuwania:', error);
-            toast.error('Błąd podczas usuwania');
+            toast.error('Error during deletion');
         }
     };
 
@@ -800,7 +800,7 @@ const App: React.FC = () => {
                             <button
                                 className={`btn filter-toggle-btn ${isFilterPanelVisible ? 'active' : ''}`}
                                 onClick={toggleFilterPanel}
-                                title="Pokaż/ukryj filtry"
+                                title="Show/hide filters"
                             >
                                 <i className="bi bi-funnel"></i>
                             </button>
@@ -860,7 +860,7 @@ const App: React.FC = () => {
                             <div className="d-flex align-items-center">
                                 <h3>Prompts</h3>
                                 <span className="prompt-count ms-3">
-      {displayedPrompts.length} z {filteredPrompts.length} wyników
+      {displayedPrompts.length} of {filteredPrompts.length} results
     </span>
 
                                 {/* Wskaźniki aktywnych filtrów */}
@@ -869,7 +869,7 @@ const App: React.FC = () => {
                                     <div className="active-filters ms-3">
                                         {searchFilters.author && (
                                             <span className="filter-badge">
-                Autor: {searchFilters.author}
+                Author: {searchFilters.author}
                                                 <button
                                                     className="clear-filter-btn"
                                                     onClick={() => applyFilters({ author: '' })}
@@ -893,7 +893,7 @@ const App: React.FC = () => {
 
                                         {searchFilters.dateFrom || searchFilters.dateTo && (
                                             <span className="filter-badge">
-                Data: {searchFilters.dateFrom || searchFilters.dateTo}
+                Date: {searchFilters.dateFrom || searchFilters.dateTo}
                                                 <button
                                                     className="clear-filter-btn"
                                                     onClick={() => applyFilters({ dateFrom: '', dateTo: '' })}
@@ -911,32 +911,32 @@ const App: React.FC = () => {
                                     className={`btn category-btn me-2 ${sortOption === 'newest' ? 'active' : ''}`}
                                     onClick={() => handleSortChange('newest')}
                                 >
-                                    Od najnowszych
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${sortOption === 'titleAZ' ? 'active' : ''}`}
-                                    onClick={() => handleSortChange('titleAZ')}
-                                >
-                                    Tytuł A-Z
-                                </button>
-                                <button
-                                    className={`btn category-btn me-2 ${sortOption === 'titleZA' ? 'active' : ''}`}
-                                    onClick={() => handleSortChange('titleZA')}
-                                >
-                                    Tytuł Z-A
+                                    Newest
                                 </button>
                                 <button
                                     className={`btn category-btn ${sortOption === 'oldest' ? 'active' : ''}`}
                                     onClick={() => handleSortChange('oldest')}
                                 >
-                                    Od najstarszych
+                                    Oldest
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${sortOption === 'titleAZ' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('titleAZ')}
+                                >
+                                    Title A-Z
+                                </button>
+                                <button
+                                    className={`btn category-btn me-2 ${sortOption === 'titleZA' ? 'active' : ''}`}
+                                    onClick={() => handleSortChange('titleZA')}
+                                >
+                                    Title Z-A
                                 </button>
                             </div>
                         </div>
                         {isLoadingPrompts ? (
                             <div className="loading-state text-center py-5">
                                 <i className="bi bi-arrow-repeat spinner display-4"></i>
-                                <p>Ładowanie promptów...</p>
+                                <p>Loading prompts...</p>
                             </div>
                         ) : (
                         <div className="row g-4">
@@ -976,7 +976,7 @@ const App: React.FC = () => {
                                         {/* Selektor - w prawym rogu */}
                                         <div className="position-absolute end-0 top-0">
                                             <div className="page-size-selector d-flex align-items-center">
-                                                <label htmlFor="page-size" className="me-2">Promptów na stronę:</label>
+                                                <label htmlFor="page-size" className="me-2">Prompts per page</label>
                                                 <select
                                                     id="page-size"
                                                     className="form-select form-select-sm"
@@ -1000,8 +1000,8 @@ const App: React.FC = () => {
                                 <div className="col-12 text-center py-5">
                                     <div className="no-results">
                                         <i className="bi bi-search display-1 mt-3"></i>
-                                        <h4 className="mt-3">Nie znaleziono promptów</h4>
-                                        <p className="mt-3">Spróbuj zmienić kryteria wyszukiwania lub filtry</p>
+                                        <h4 className="mt-3">No prompts found</h4>
+                                        <p className="mt-3">Try changing your search criteria or filters</p>
                                         <button className="btn reset-search-btn mt-2" onClick={() => {
                                             if (searchInputRef.current) {
                                                 searchInputRef.current.value = '';
@@ -1015,7 +1015,7 @@ const App: React.FC = () => {
                                                 category: 'All'
                                             });
                                         }}>
-                                            <i className="bi bi-arrow-counterclockwise"></i> Resetuj filtry
+                                            <i className="bi bi-arrow-counterclockwise"></i> Try changing your search criteria or filters
                                         </button>
                                     </div>
                                 </div>
@@ -1031,14 +1031,14 @@ const App: React.FC = () => {
                 <div className="modal-overlay">
                     <div className="create-prompt-modal">
                         <div className="modal-header">
-                            <h3>Nowy prompt</h3>
+                            <h3>New Prompt</h3>
                             <button className="btn close-btn" onClick={closeCreatePrompt}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
                         <div className="modal-body">
                             <div className="form-group mb-3">
-                                <label htmlFor="prompt-title">Tytuł</label>
+                                <label htmlFor="prompt-title">Title</label>
                                 <input
                                     type="text"
                                     id="prompt-title"
@@ -1046,12 +1046,12 @@ const App: React.FC = () => {
                                     className="form-control"
                                     value={newPrompt.title}
                                     onChange={handleNewPromptChange}
-                                    placeholder="Podaj tytuł promptu"
+                                    placeholder="Enter prompt title"
                                     autoFocus
                                 />
                             </div>
                             <div className="form-group mb-3">
-                                <label htmlFor="prompt-description">Opis</label>
+                                <label htmlFor="prompt-description">Description</label>
                                 <input
                                     type="text"
                                     id="prompt-description"
@@ -1059,11 +1059,11 @@ const App: React.FC = () => {
                                     className="form-control"
                                     value={newPrompt.description}
                                     onChange={handleNewPromptChange}
-                                    placeholder="Krótki opis promptu"
+                                    placeholder="Short prompt description"
                                 />
                             </div>
                             <div className="form-group mb-3">
-                                <label htmlFor="prompt-tags">Tagi (oddzielone przecinkami)</label>
+                                <label htmlFor="prompt-tags">Tags (comma-separated)</label>
                                 <input
                                     type="text"
                                     id="prompt-tags"
@@ -1071,30 +1071,30 @@ const App: React.FC = () => {
                                     className="form-control"
                                     value={newPrompt.tags}
                                     onChange={handleNewPromptChange}
-                                    placeholder="np. SEO, Content, Blog"
+                                    placeholder="e.g., SEO, Content, Blog"
                                 />
                             </div>
                             <div className="form-group mb-3">
-                                <label htmlFor="prompt-content">Treść promptu</label>
+                                <label htmlFor="prompt-content">Prompt Content</label>
                                 <textarea
                                     id="prompt-content"
                                     name="content"
                                     className="form-control prompt-textarea"
                                     value={newPrompt.content}
                                     onChange={handleNewPromptChange}
-                                    placeholder="Wpisz treść promptu..."
+                                    placeholder="Enter prompt content..."
                                     rows={10}
                                 ></textarea>
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn cancel-btn" onClick={closeCreatePrompt}>Anuluj</button>
+                            <button className="btn cancel-btn" onClick={closeCreatePrompt}>Cancel</button>
                             <button
                                 className="btn save-btn"
                                 onClick={handleSavePrompt}
                                 disabled={!newPrompt.title || !newPrompt.content}
                             >
-                                Zapisz
+                                Save
                             </button>
                         </div>
                     </div>

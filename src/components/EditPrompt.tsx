@@ -33,8 +33,8 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
 
         const currentHistoryItem: PromptHistoryItem = {
             version: (prompt.history?.length || 0) + 1,
-            date: new Date().toLocaleDateString(),
-            changes: 'Edycja promptu',
+            date: new Date().toLocaleDateString("en-US"),
+            changes: 'Edit promptu',
             content: editedPrompt.content
         };
 
@@ -50,7 +50,7 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
             description: editedPrompt.description,
             tags: processedTags,
             promptContent: editedPrompt.content,
-            date: 'Teraz',
+            date: 'Now',
             history: updatedHistory
         };
 
@@ -64,14 +64,14 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
         <div className="modal-overlay">
             <div className="create-prompt-modal">
                 <div className="modal-header">
-                    <h3>Edytuj prompt</h3>
+                    <h3>Edit Prompt</h3>
                     <button className="btn close-btn" onClick={onClose}>
                         <i className="bi bi-x-lg"></i>
                     </button>
                 </div>
                 <div className="modal-body">
                     <div className="form-group mb-3">
-                        <label htmlFor="prompt-title">Tytuł</label>
+                        <label htmlFor="prompt-title">Title</label>
                         <input
                             type="text"
                             id="prompt-title"
@@ -79,11 +79,11 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
                             className="form-control"
                             value={editedPrompt.title}
                             onChange={handleChange}
-                            placeholder="Podaj tytuł promptu"
+                            placeholder="Enter prompt title"
                         />
                     </div>
                     <div className="form-group mb-3">
-                        <label htmlFor="prompt-description">Opis</label>
+                        <label htmlFor="prompt-description">Description</label>
                         <input
                             type="text"
                             id="prompt-description"
@@ -91,11 +91,11 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
                             className="form-control"
                             value={editedPrompt.description}
                             onChange={handleChange}
-                            placeholder="Krótki opis promptu"
+                            placeholder="Short prompt description"
                         />
                     </div>
                     <div className="form-group mb-3">
-                        <label htmlFor="prompt-tags">Tagi (oddzielone przecinkami)</label>
+                        <label htmlFor="prompt-tags">Tags (comma-separated)</label>
                         <input
                             type="text"
                             id="prompt-tags"
@@ -103,26 +103,26 @@ const EditPrompt: React.FC<EditPromptProps> = ({ isOpen, onClose, prompt, onSave
                             className="form-control"
                             value={editedPrompt.tags}
                             onChange={handleChange}
-                            placeholder="np. SEO, Content, Blog"
+                            placeholder="e.g., SEO, Content, Blog"
                         />
                     </div>
                     <div className="form-group mb-3">
-                        <label htmlFor="prompt-content">Treść promptu</label>
+                        <label htmlFor="prompt-content">Prompt Content</label>
                         <textarea
                             id="prompt-content"
                             name="content"
                             className="form-control prompt-textarea"
                             value={editedPrompt.content}
                             onChange={handleChange}
-                            placeholder="Wpisz treść promptu..."
+                            placeholder="Enter prompt content..."
                             rows={10}
                         ></textarea>
                     </div>
                 </div>
                 <div className="modal-footer">
-                    <button className="btn cancel-btn" onClick={onClose}>Anuluj</button>
+                    <button className="btn cancel-btn" onClick={onClose}>Cancel</button>
                     <button className="btn save-btn" onClick={handleSubmit} disabled={!editedPrompt.title || !editedPrompt.content}>
-                        Zapisz zmiany
+                        Save Changes
                     </button>
                 </div>
             </div>

@@ -51,10 +51,10 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ signOut, isDarkTheme }) => {
             <div className={`profile-dropdown ${isDarkTheme ? 'dark-theme-dropdown' : ''}`}>
               <div className="dropdown-menu">
                 <a className="dropdown-item" href="#profile">
-                  <i className="bi bi-person"></i> Profil
+                  <i className="bi bi-person"></i> Profile
                 </a>
                 <a className="dropdown-item" href="#preferences">
-                  <i className="bi bi-sliders"></i> Preferencje
+                  <i className="bi bi-sliders"></i> Preferences
                 </a>
                 <button
                     className="dropdown-item logout-btn"
@@ -64,7 +64,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ signOut, isDarkTheme }) => {
                     }}
                     type="button"
                 >
-                  <i className="bi bi-box-arrow-right"></i> Wyloguj
+                  <i className="bi bi-box-arrow-right"></i> Logout
                 </button>
               </div>
             </div>

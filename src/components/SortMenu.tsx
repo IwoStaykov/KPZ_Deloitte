@@ -20,11 +20,11 @@ const SortMenu: React.FC<SortDropdownProps> = ({ currentSort, onSortChange }) =>
 
   const getSortLabel = (option: string) => {
     switch (option) {
-      case 'title-asc': return 'Tytuł A-Z';
-      case 'title-desc': return 'Tytuł Z-A';
-      case 'date-asc': return 'Od najstarszych';
-      case 'date-desc': return 'Od najnowszych';
-      default: return 'Sortuj';
+      case 'title-asc': return 'Title A-Z';
+      case 'title-desc': return 'Title Z-A';
+      case 'date-asc': return 'Oldest First';
+      case 'date-desc': return 'Newest First';
+      default: return 'Sort';
     }
   };
 
@@ -42,16 +42,16 @@ const SortMenu: React.FC<SortDropdownProps> = ({ currentSort, onSortChange }) =>
       {open && (
         <ul className="sort-dropdown">
           <li onClick={() => handleSelect('title-asc')}>
-            <i className="bi bi-sort-alpha-down me-2"></i>Tytuł A-Z
+            <i className="bi bi-sort-alpha-down me-2"></i>Title A-Z
           </li>
           <li onClick={() => handleSelect('title-desc')}>
-            <i className="bi bi-sort-alpha-down-alt me-2"></i>Tytuł Z-A
+            <i className="bi bi-sort-alpha-down-alt me-2"></i>Title Z-A
           </li>
           <li onClick={() => handleSelect('date-asc')}>
-            <i className="bi bi-sort-numeric-down me-2"></i>Od najstarszych
+            <i className="bi bi-sort-numeric-down me-2"></i>Oldest First
           </li>
           <li onClick={() => handleSelect('date-desc')}>
-            <i className="bi bi-sort-numeric-down-alt me-2"></i>Od najnowszych
+            <i className="bi bi-sort-numeric-down-alt me-2"></i>Newest First
           </li>
         </ul>
       )}

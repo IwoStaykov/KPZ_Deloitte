@@ -1,6 +1,6 @@
 // PromptDetail.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { PromptDetailProps, PromptHistoryItem } from '../types/interfaces'; // Upewnij się, że PromptHistoryItem ma pole 'date'
+import { PromptDetailProps} from '../types/interfaces'; // Upewnij się, że PromptHistoryItem ma pole 'date' 
 import DiffEditor, { DiffMethod } from 'react-diff-viewer-continued';
 
 const PromptDetail: React.FC<PromptDetailProps> = ({

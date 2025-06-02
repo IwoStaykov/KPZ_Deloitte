@@ -475,7 +475,6 @@ const App: React.FC = () => {
         if (selectedPrompt) {
             setEditingPrompt(selectedPrompt);
             setIsEditPromptOpen(true);
-            setIsPromptDetailOpen(false); // Zamykamy podgląd szczegółów
         }
     };
 

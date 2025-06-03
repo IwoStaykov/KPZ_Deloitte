@@ -41,12 +41,15 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ signOut, isDarkTheme }) => {
 
   return (
       <div className="profile-menu-container" ref={menuRef}>
-        <img
-            src="https://via.placeholder.com/40"
-            alt="Profile"
-            className="profile-img"
-            onClick={toggleMenu}
-        />
+        <button
+    type="button"
+    className="btn profile-btn" // Możesz dodać własne style dla tego przycisku
+    onClick={toggleMenu}
+    aria-label="Open profile menu"
+    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} // Przykładowe style, aby wyglądał jak ikona
+>
+    <i className="bi bi-person-circle" style={{ fontSize: '24px', color: 'var(--text-color)' }}></i> {/* Stylizuj ikonę według potrzeb */}
+</button>
         {isOpen && (
             <div className={`profile-dropdown ${isDarkTheme ? 'dark-theme-dropdown' : ''}`}>
               <div className="dropdown-menu">

@@ -223,6 +223,7 @@ const App: React.FC = () => {
                 "description",
                 "content",
                 "tags",
+                "authorId",
                 "authorName",
                 "creationDate",
                 "lastModifiedDate",
@@ -255,6 +256,7 @@ const App: React.FC = () => {
                         description: p.description || '',
                         tags: p.tags?.filter(Boolean) || [],
                         author: p.authorName,
+                        authorId: p.authorId,
                         date: new Date(p.lastModifiedDate).toISOString(),
                         usageCount: 0,
                         promptContent: p.content,
@@ -473,15 +475,23 @@ const App: React.FC = () => {
     // Obsługa otwarcia okna edycji promptu
     const handleEditPrompt = () => {
         if (selectedPrompt) {
+            if (selectedPrompt.authorId !== userSub) {
+            toast.error("You can only edit your own prompts.");
+            return;
+        }
             setEditingPrompt(selectedPrompt);
             setIsEditPromptOpen(true);
-            setIsPromptDetailOpen(false); // Zamykamy podgląd szczegółów
         }
     };
 
     const handleSaveEditedPrompt = async (editedPromptData: any) => {
         if (!editingPrompt) return;
-
+        if (editingPrompt.authorId !== userSub) {
+            toast.error("You are not authorized to edit this prompt.");
+            setIsEditPromptOpen(false);
+            setIsPromptDetailOpen(true); 
+        return;
+    }
         try {
             const tagsArray = typeof editedPromptData.tags === 'string'
                 ? editedPromptData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
@@ -561,6 +571,7 @@ const App: React.FC = () => {
                 description: refreshed.description || '',
                 tags: refreshed.tags?.filter((tag): tag is string => tag !== null) ?? [],
                 author: refreshed.authorName,
+                authorId: refreshed.authorId,
                 date: new Date(refreshed.lastModifiedDate).toLocaleDateString(),
                 usageCount: 0,
                 promptContent: refreshed.content,
@@ -578,6 +589,16 @@ const App: React.FC = () => {
 
 
     const handleDeletePrompt = async (promptId: string) => {
+        const promptToDelete = allPrompts.find(p => p.id === promptId);
+        if (!promptToDelete) {
+            toast.error("Prompt not found.");
+            return;
+        }
+
+        if (promptToDelete.authorId !== userSub) {
+            toast.error("You can only delete your own prompts.");
+            return;
+        }
         try {
             await client.models.Prompt.delete({ id: promptId });
             setAllPrompts(prev => prev.filter(p => p.id !== promptId));
@@ -853,6 +874,7 @@ const App: React.FC = () => {
                         onEdit={handleEditPrompt}
                         onDelete={handleDeletePrompt}
                         selectedPrompt={selectedPrompt}
+                        currentUserId={userSub ?? undefined}
                     />
                 ) : (
                     <div className="content-container">
